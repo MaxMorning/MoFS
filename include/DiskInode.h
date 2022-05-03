@@ -3,7 +3,7 @@
  * @brief 外存inode头文件
  * @mainpage DiskInode
  * @author 韩孟霖
- * @date 2022-05-03
+ * @date 2022/05/03
  * @license GPL v3
  */
 
@@ -11,7 +11,7 @@
 #define MOFS_DISK_INODE_H
 
 /**
- * @brief 外存索引节点(DiskINode)
+ * @brief 外存索引节点(DiskInode)
  *
  */
 class DiskInode {
@@ -28,7 +28,7 @@ public:
     ~DiskInode();
 
     /* Members */
-    unsigned int d_mode;    ///< 状态的标志位，定义见enum INodeFlag
+    unsigned int d_mode;    ///< 状态的标志位
     int d_nlink;            ///< 文件联结计数，即该文件在目录树中不同路径名的数量
 
     short d_uid;            ///< 文件所有者的用户标识数

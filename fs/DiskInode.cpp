@@ -3,9 +3,10 @@
  * @brief 外存inode实现文件
  * @mainpage DiskInode
  * @author 韩孟霖
- * @date 2022-05-03
+ * @date 2022/05/03
  * @license GPL v3
  */
+#include <cstring>
 
 #include "../include/DiskInode.h"
 
@@ -18,10 +19,9 @@ DiskInode::DiskInode() {
     this->d_uid = -1;
     this->d_gid = -1;
     this->d_size = 0;
-    for (int i = 0; i < 10; i++)
-    {
-        this->d_addr[i] = 0;
-    }
+
+    memset(this->d_addr, 0, 10 * sizeof(int));
+
     this->d_atime = 0;
     this->d_mtime = 0;
 }
@@ -29,6 +29,4 @@ DiskInode::DiskInode() {
 /**
  * @brief DiskInode析构函数
  */
-DiskInode::~DiskInode() {
-
-}
+DiskInode::~DiskInode() = default;
