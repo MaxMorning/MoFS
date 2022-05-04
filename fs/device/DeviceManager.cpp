@@ -16,7 +16,7 @@ DeviceManager::DeviceManager() {
     this->imgFilePtr = nullptr;
 
     // 先给SuperBlock 和 inode区分配 256KB。这个值可以在SuperBlock加载时被修改。
-    this->SetOffset(DEFAULT_OFFSET);
+    this->SetOffset(DEFAULT_OFFSET + HEADER_SIG_SIZE);
 }
 
 void DeviceManager::OpenImage(const std::string &imagePath) {
@@ -37,14 +37,14 @@ void DeviceManager::SetOffset(int offset) {
     this->blockContentOffset = offset;
 }
 
-unsigned int DeviceManager::ReadBlock(int blockNo, char *buffer) {
+unsigned int DeviceManager::ReadBlock(int blockNo, void *buffer) {
     int dstOffset = blockNo * BLOCK_SIZE + this->blockContentOffset;
     fseek(this->imgFilePtr, dstOffset, SEEK_SET);
 
     return fread(buffer, 1, BLOCK_SIZE, this->imgFilePtr);
 }
 
-unsigned int DeviceManager::WriteBlock(int blockNo, char *buffer, int size) {
+unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer, int size) {
     if (size > BLOCK_SIZE) {
         Diagnose::PrintError("Write more than 512B to a block.");
         return -1;
@@ -90,7 +90,7 @@ int DeviceManager::LoadSuperBlock(void *superBlockPtr) {
     }
 
     SuperBlock* ptr = (SuperBlock*) superBlockPtr;
-    this->blockContentOffset = ptr->s_isize * BLOCK_SIZE + sizeof(SuperBlock);
+    this->blockContentOffset = ptr->s_isize * BLOCK_SIZE + sizeof(SuperBlock) + HEADER_SIG_SIZE;
 
     return 0;
 }
@@ -102,5 +102,9 @@ int DeviceManager::StoreSuperBlock(void *superBlockPtr) {
     if (writeByte != sizeof(SuperBlock)) {
         return -1;
     }
+
+    SuperBlock* ptr = (SuperBlock*) superBlockPtr;
+    this->blockContentOffset = ptr->s_isize * BLOCK_SIZE + sizeof(SuperBlock) + HEADER_SIG_SIZE;
+
     return 0;
 }

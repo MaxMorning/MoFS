@@ -17,6 +17,9 @@
 /// 块大小(字节)
 #define BLOCK_SIZE 512
 
+/// 设备前部占用空间(字节)，包括引导区、内核等
+#define HEADER_SIG_SIZE 200 * BLOCK_SIZE
+
 /**
  * @brief 块设备管理器，包含缓存机制
  */
@@ -62,7 +65,7 @@ public:
      * @param buffer 待写入数据的缓冲区，调用者需要保证其有足够的空间
      * @return 返回实际读取的字节数
      */
-    unsigned int ReadBlock(int blockNo, char* buffer);
+    unsigned int ReadBlock(int blockNo, void *buffer);
 
     /**
      * @brief 根据提供的blockNo，向磁盘或内存缓存中写入数据
@@ -71,7 +74,7 @@ public:
      * @param size 待写入缓冲区的大小
      * @return 返回实际写入的字节数
      */
-    unsigned int WriteBlock(int blockNo, char* buffer, int size);
+    unsigned int WriteBlock(int blockNo, void *buffer, int size);
 
     /**
      * @brief 读取指定编号的diskInode

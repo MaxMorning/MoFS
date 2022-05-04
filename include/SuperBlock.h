@@ -33,6 +33,32 @@ public:
      */
     static int MakeFS(int totalDiskByte, int inodeNum);
 
+    /**
+     * @brief 分配一个块，存数据
+     * @return 分配到的块号，-1表示出错
+     */
+    int AllocBlock();
+
+    /**
+     * @brief 释放一个块，标记为空闲块
+     * @param blockIdx 待释放的块号
+     * @return 0表示成功，-1表示出错
+     */
+    int ReleaseBlock(int blockIdx);
+
+    /**
+     * @brief 分配一个DiskInode
+     * @return 分配到的DiskInode号，-1表示出错
+     */
+    int AllocDiskInode();
+
+    /**
+     * @brief 释放一个Inode
+     * @param inodeIdx 待释放的Inode
+     * @return 0表示成功，-1表示出错
+     */
+    int ReleaseInode(int inodeIdx);
+
     /* Members */
 public:
     int		s_isize;		///< 外存Inode区占用的盘块数
@@ -42,7 +68,9 @@ public:
     int		s_free[100];	///< 直接管理的空闲盘块索引表
 
     int		s_ninode;		///< 直接管理的空闲外存Inode数量
+    int     s_nextInodeBlk; ///< 指向存储空闲Inode的下一个Block
     int		s_inode[100];	///< 直接管理的空闲外存Inode索引表
+    int     s_rootInode;    ///< 根目录inode编号
 
     int		s_flock;		///< 封锁空闲盘块索引表标志
     int		s_ilock;		///< 封锁空闲Inode表标志
@@ -50,7 +78,7 @@ public:
     int		s_fmod;			///< 内存中super block副本被修改标志，意味着需要更新外存对应的Super Block
     int		s_ronly;		///< 本文件系统只能读出
     int		s_time;			///< 最近一次更新时间
-    int		padding[47];	///< 填充使SuperBlock块大小等于1024字节，占据2个扇区
+    int		padding[45];	///< 填充使SuperBlock块大小等于1024字节，占据2个扇区
 
 
     static SuperBlock superBlock; ///< SuperBlock单例
