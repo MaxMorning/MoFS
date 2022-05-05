@@ -44,16 +44,11 @@ unsigned int DeviceManager::ReadBlock(int blockNo, void *buffer) {
     return fread(buffer, 1, BLOCK_SIZE, this->imgFilePtr);
 }
 
-unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer, int size) {
-    if (size > BLOCK_SIZE) {
-        Diagnose::PrintError("Write more than 512B to a block.");
-        return -1;
-    }
-
+unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer) {
     int dstOffset = blockNo * BLOCK_SIZE + this->blockContentOffset;
     fseek(this->imgFilePtr, dstOffset, SEEK_SET);
 
-    return fwrite(buffer, 1, size, this->imgFilePtr);
+    return fwrite(buffer, 1, BLOCK_SIZE, this->imgFilePtr);
 }
 
 int DeviceManager::ReadInode(int inodeNo, DiskInode *inodePtr) {

@@ -67,7 +67,7 @@ public:
     MemInode(const DiskInode& diskInode, int diskInodeIdx);
 
     /* Destructors */
-    ~MemInode();
+    ~MemInode() = default;
 
     /**
      * @brief 根据Inode对象中的物理磁盘块索引表，读取相应的文件数据
@@ -88,11 +88,24 @@ public:
     int Write(int offset, char* buffer, int size);
 
     /**
+     * @brief 扩展文件大小
+     * @param newSize 新的文件大小
+     * @return 0表示成功，-1表示失败
+     */
+    int Expand(int newSize);
+
+    /**
      * @brief 将文件的逻辑块号转换成对应的物理盘块号
      * @param logicBlockIndex 逻辑块号
      * @return 物理块号
      */
     int BlockMap(int logicBlockIndex);
+
+    /**
+     * @brief 释放占用的所有Block
+     * @return 0表示成功，-1表示失败
+     */
+    int ReleaseBlocks();
 
     /* Members */
 public:

@@ -71,10 +71,9 @@ public:
      * @brief 根据提供的blockNo，向磁盘或内存缓存中写入数据
      * @param blockNo 待写入的块号
      * @param buffer 待写入块中的缓冲区数据
-     * @param size 待写入缓冲区的大小
      * @return 返回实际写入的字节数
      */
-    unsigned int WriteBlock(int blockNo, void *buffer, int size);
+    unsigned int WriteBlock(int blockNo, void *buffer);
 
     /**
      * @brief 读取指定编号的diskInode
