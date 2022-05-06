@@ -12,6 +12,8 @@
 /// 映象文件的默认偏移量
 #define DEFAULT_OFFSET 256 * 1024
 
+DeviceManager DeviceManager::deviceManager;
+
 DeviceManager::DeviceManager() {
     this->imgFilePtr = nullptr;
 
@@ -20,7 +22,7 @@ DeviceManager::DeviceManager() {
 }
 
 void DeviceManager::OpenImage(const std::string &imagePath) {
-    this->imgFilePtr = fopen(imagePath.c_str(), "rw");
+    this->imgFilePtr = fopen(imagePath.c_str(), "w+");
     if (this->imgFilePtr == nullptr) {
         Diagnose::PrintError("Cannot open image : " + imagePath);
         return;
@@ -44,11 +46,11 @@ unsigned int DeviceManager::ReadBlock(int blockNo, void *buffer) {
     return fread(buffer, 1, BLOCK_SIZE, this->imgFilePtr);
 }
 
-unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer) {
+unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer, int size) {
     int dstOffset = blockNo * BLOCK_SIZE + this->blockContentOffset;
     fseek(this->imgFilePtr, dstOffset, SEEK_SET);
 
-    return fwrite(buffer, 1, BLOCK_SIZE, this->imgFilePtr);
+    return fwrite(buffer, 1, size, this->imgFilePtr);
 }
 
 int DeviceManager::ReadInode(int inodeNo, DiskInode *inodePtr) {

@@ -11,24 +11,66 @@
 #include "../include/device/DeviceManager.h"
 #include "../include/MemInode.h"
 #include "../include/SuperBlock.h"
+#include "../utils/Diagnose.h"
 
-MemInode::MemInode(const DiskInode &diskInode, int diskInodeIdx) {
-    this->i_flag = 0;
-    this->i_mode = diskInode.d_mode;
+MemInode MemInode::systemMemInodeTable[SYSTEM_MEM_INODE_NUM];
 
-    this->i_count = 0;
-    this->i_nlink = diskInode.d_nlink;
+int MemInode::MemInodeFactory(int diskInodeIdx, MemInode*& memInodePtr) {
+    // 在目前的systemMemInodeTable中搜索已经存在的MemInode
+    int searchResult = -1;
+    for (int i = 0; i < SYSTEM_MEM_INODE_NUM; ++i) {
+        if (MemInode::systemMemInodeTable[i].i_used == 1 && MemInode::systemMemInodeTable[i].i_number == diskInodeIdx) {
+            searchResult = i;
+            break;
+        }
+    }
 
-    this->i_dev = 0; // 默认设置设备号为0
-    this->i_number = diskInodeIdx;
+    if (searchResult != -1) {
+        memInodePtr = &(MemInode::systemMemInodeTable[searchResult]);
+        return 0;
+    }
 
-    this->i_uid = diskInode.d_uid;
-    this->i_gid = diskInode.d_gid;
+    // 没找到，需要从磁盘中加载
+    // 找一个空闲的entry
+    searchResult = -1;
+    for (int i = 0; i < SYSTEM_MEM_INODE_NUM; ++i) {
+        if (MemInode::systemMemInodeTable[i].i_used == 0) {
+            searchResult = i;
+            break;
+        }
+    }
 
-    this->i_size = diskInode.d_size;
-    memcpy(this->i_addr, diskInode.d_addr, 10 * sizeof(int));
+    if (searchResult == -1) {
+        Diagnose::PrintError("No more MemInode entry available.");
+        return -1;
+    }
 
-    this->i_lastr = -1;
+    DiskInode diskInode;
+    if (DiskInode::DiskInodeFactory(diskInodeIdx, diskInode) == -1) {
+        return -1;
+    }
+
+    MemInode& memInode = MemInode::systemMemInodeTable[searchResult];
+
+    memInode.i_flag = 0;
+    memInode.i_mode = diskInode.d_mode;
+
+    memInode.i_count = 0;
+    memInode.i_nlink = diskInode.d_nlink;
+
+    memInode.i_dev = 0; // 默认设置设备号为0
+    memInode.i_number = diskInodeIdx;
+
+    memInode.i_uid = diskInode.d_uid;
+    memInode.i_gid = diskInode.d_gid;
+
+    memInode.i_size = diskInode.d_size;
+    memcpy(memInode.i_addr, diskInode.d_addr, 10 * sizeof(int));
+
+    memInode.i_used = 1;
+
+    memInodePtr = &(MemInode::systemMemInodeTable[searchResult]);
+    return 0;
 }
 
 int MemInode::BlockMap(int logicBlockIndex) {
@@ -473,5 +515,28 @@ int MemInode::ReleaseBlocks() {
             break;
         }
     }
+    return 0;
+}
+
+int MemInode::Close(int lastAccTime, int lastModTime) {
+    assert(this->i_count == 0);
+
+    DiskInode diskInode;
+    diskInode.d_mode = this->i_mode;
+    diskInode.d_nlink = this->i_nlink;
+    diskInode.d_uid = this->i_uid;
+    diskInode.d_gid = this->i_gid;
+    diskInode.d_size = this->i_size;
+
+    memcpy(diskInode.d_addr, this->i_addr, 10 * sizeof(int));
+
+    diskInode.d_atime = lastAccTime;
+    diskInode.d_mtime = lastModTime;
+
+    if (-1 == DeviceManager::deviceManager.WriteInode(this->i_number, &diskInode)) {
+        return -1;
+    }
+
+    this->i_used = 0;
     return 0;
 }

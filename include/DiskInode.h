@@ -23,6 +23,20 @@ public:
     DiskInode();
 
     /**
+     * @brief DiskInode 工厂
+     * @param diskInodeIdx DiskInode序号
+     * @param diskInode 存放diskInode的
+     * @return
+     */
+    static int DiskInodeFactory(int diskInodeIdx, DiskInode& diskInode);
+
+    /**
+     * @brief 释放占用的所有Block
+     * @return 0表示成功，-1表示失败
+     */
+    int ReleaseBlocks();
+
+    /**
      * @brief DiskInode析构函数
      */
     ~DiskInode();

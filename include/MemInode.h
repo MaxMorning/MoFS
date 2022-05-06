@@ -12,6 +12,8 @@
 
 #include "DiskInode.h"
 
+#define SYSTEM_MEM_INODE_NUM 512
+
 /**
  * @brief i_flag中标志位
  */
@@ -47,24 +49,20 @@ public:
     static const unsigned int IRWXG = ((IRWXU) >> 3);			///< 文件主同组用户对文件的读、写、执行权限
     static const unsigned int IRWXO = ((IRWXU) >> 6);			///< 其他用户对文件的读、写、执行权限
 
-    static const int BLOCK_SIZE = 512;		///< 文件逻辑块大小: 512字节
-    static const int ADDRESS_PER_INDEX_BLOCK = BLOCK_SIZE / sizeof(int);	///< 每个间接索引表(或索引块)包含的物理盘块号
-
     static const int SMALL_FILE_BLOCK = 6;	///< 小型文件：直接索引表最多可寻址的逻辑块号
     static const int LARGE_FILE_BLOCK = 128 * 2 + 6;	///< 大型文件：经一次间接索引表最多可寻址的逻辑块号
     static const int HUGE_FILE_BLOCK = 128 * 128 * 2 + 128 * 2 + 6;	///< 巨型文件：经二次间接索引最大可寻址文件逻辑块号
 
     /* Functions */
 public:
-    /* Constructors */
-    MemInode();
-
     /**
-     * @brief 构造函数，从DistInode构造
-     * @param diskInode
+     * @brief MemInode构造工厂
      * @param diskInodeIdx DiskInode序号
+     * @param memInodePtr 结果MemInode，函数在此改写其指向的地址
+     * @return 0表示成功，-1表示失败
+     * @note 所有MemInode的实例化都在systemMemInodeTable中存储，不允许在其它地方实例化
      */
-    MemInode(const DiskInode& diskInode, int diskInodeIdx);
+    static int MemInodeFactory(int diskInodeIdx, MemInode*& memInodePtr);
 
     /* Destructors */
     ~MemInode() = default;
@@ -107,12 +105,20 @@ public:
      */
     int ReleaseBlocks();
 
+    /**
+     * @brief 关闭inode，写回磁盘
+     * @param lastAccTime 最后访问时间
+     * @param lastModTime 最后修改时间
+     * @return 0表示成功，-1表示失败
+     */
+    int Close(int lastAccTime, int lastModTime);
+
     /* Members */
 public:
     unsigned int i_flag;	///< 状态的标志位，定义见enum INodeFlag
     unsigned int i_mode;	///< 文件工作方式信息
 
-    int		i_count;		///< 引用计数
+    int		i_count;		///< 引用计数，指的是有多少OpenFile连接至此
     int		i_nlink;		///< 文件联结计数，即该文件在目录树中不同路径名的数量
 
     short	i_dev;			///< 外存inode所在存储设备的设备号
@@ -124,6 +130,15 @@ public:
     int		i_size;			///< 文件大小，字节为单位
     int		i_addr[10];		///< 用于文件逻辑块好和物理块好转换的基本索引表
 
-    int		i_lastr;		///< 存放最近一次读取文件的逻辑块号，用于判断是否需要预读
+    int		i_used;		    ///< 指示该inode是否有效。在systemMemInodeTable中，若为1则表示有效，0表示空闲。
+                            ///< 在UNIX V6++中，这里存放最近一次读取文件的逻辑块号，用于判断是否需要预读。
+
+    static MemInode systemMemInodeTable[SYSTEM_MEM_INODE_NUM]; ///< 系统全局inode表
+
+private:
+    /**
+     * 构造函数，不允许在其它地方实例化MemInode
+     */
+    MemInode() = default;
 };
 #endif //MOFS_MEMINODE_H

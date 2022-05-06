@@ -10,9 +10,10 @@
 
 #include "../include/device/DeviceManager.h"
 #include "../include/SuperBlock.h"
-#include "../include/DiskInode.h"
 #include "../utils/Diagnose.h"
 #include "../include/MemInode.h"
+
+SuperBlock SuperBlock::superBlock;
 
 int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
     SuperBlock& superBlockRef = SuperBlock::superBlock;
