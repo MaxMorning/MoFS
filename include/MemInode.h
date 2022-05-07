@@ -56,13 +56,20 @@ public:
     /* Functions */
 public:
     /**
-     * @brief MemInode构造工厂
+     * @brief MemInode构造工厂，有可能会从磁盘中加载DiskInode
      * @param diskInodeIdx DiskInode序号
      * @param memInodePtr 结果MemInode，函数在此改写其指向的地址
      * @return 0表示成功，-1表示失败
      * @note 所有MemInode的实例化都在systemMemInodeTable中存储，不允许在其它地方实例化
      */
     static int MemInodeFactory(int diskInodeIdx, MemInode*& memInodePtr);
+
+    /**
+     * @brief 单纯地为一个新的MemInode分配一个entry，不做初始化，仅设置占用标记
+     * @param memInodePtr 函数在此改写其指向的地址
+     * @return 0表示成功，-1表示失败
+     */
+    static int MemInodeNotInit(MemInode*& memInodePtr);
 
     /* Destructors */
     ~MemInode() = default;

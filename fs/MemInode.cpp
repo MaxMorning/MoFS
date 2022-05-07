@@ -73,6 +73,25 @@ int MemInode::MemInodeFactory(int diskInodeIdx, MemInode*& memInodePtr) {
     return 0;
 }
 
+int MemInode::MemInodeNotInit(MemInode*& memInodePtr) {
+    // 找一个空闲的entry
+    int searchResult = -1;
+    for (int i = 0; i < SYSTEM_MEM_INODE_NUM; ++i) {
+        if (MemInode::systemMemInodeTable[i].i_used == 0) {
+            searchResult = i;
+            break;
+        }
+    }
+
+    if (searchResult == -1) {
+        Diagnose::PrintError("No more MemInode entry available.");
+        return -1;
+    }
+
+    MemInode::systemMemInodeTable[searchResult].i_used = 1;
+    return 0;
+}
+
 int MemInode::BlockMap(int logicBlockIndex) {
     if (logicBlockIndex < 6) {
         // 小型文件
@@ -124,12 +143,18 @@ int max(int a, int b) {
 }
 
 int MemInode::Read(int offset, char *buffer, int size) {
+    if (this->i_size == 0) {
+        // 对空文件进行特判
+        printf("特判被触发力！\n");
+        return 0;
+    }
+
     int currentFileOffset = offset;
     int currentBufferOffset = 0;
     int actualReadDst = min(offset + size, this->i_size);
 
     int startLogicBlock = offset / BLOCK_SIZE;
-    int endLogicBlock = (actualReadDst + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    int endLogicBlock = (actualReadDst - 1) / BLOCK_SIZE;
 
     char readBlockBuffer[BLOCK_SIZE];
     // 读取第一个逻辑块的数据
@@ -189,18 +214,22 @@ int MemInode::Write(int offset, char *buffer, int size) {
     int currentBufferOffset = 0;
 
     int startLogicBlock = offset / BLOCK_SIZE;
-    int endLogicBlock = (this->i_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    int endLogicBlock = (this->i_size - 1) / BLOCK_SIZE;
 
     char writeBlockBuffer[BLOCK_SIZE];
 
     // 写第一个block的内容
     if (offset % BLOCK_SIZE == 0) {
         // 无需加载块，直接写入即可
-        unsigned int writeByteCnt = DeviceManager::deviceManager.WriteBlock(this->BlockMap(startLogicBlock), buffer);
+        int expectedSize = min(size, BLOCK_SIZE);
+        unsigned int writeByteCnt = DeviceManager::deviceManager.WriteBlock(this->BlockMap(startLogicBlock), buffer,
+                                                                            expectedSize);
 
-        if (writeByteCnt != BLOCK_SIZE) {
+        if (writeByteCnt != expectedSize) {
             return -1;
         }
+        currentBufferOffset += writeByteCnt;
+        currentFileOffset += writeByteCnt;
     }
     else {
         // 需要先加载，修改后再写入
@@ -223,7 +252,7 @@ int MemInode::Write(int offset, char *buffer, int size) {
     }
 
     // 写剩余完整块，除了最后一块
-    for (int i = startLogicBlock + 1; i <= endLogicBlock; ++i) {
+    for (int i = startLogicBlock + 1; i < endLogicBlock; ++i) {
         unsigned int writeByteCnt = DeviceManager::deviceManager.WriteBlock(this->BlockMap(i), buffer + currentBufferOffset);
 
         if (writeByteCnt != BLOCK_SIZE) {
@@ -235,31 +264,39 @@ int MemInode::Write(int offset, char *buffer, int size) {
     }
 
     // 写最后一块
-    if (offset + size < this->i_size) {
-        // 文件尾部仍然有一些内容没有被修改，需要加载最后一块
-        unsigned int readByteCnt = DeviceManager::deviceManager.ReadBlock(this->BlockMap(endLogicBlock), writeBlockBuffer);
-        if (readByteCnt != BLOCK_SIZE) {
+    if (startLogicBlock < endLogicBlock) {
+        if (offset + size < this->i_size) {
+            // 文件尾部仍然有一些内容没有被修改，需要加载最后一块
+            unsigned int readByteCnt = DeviceManager::deviceManager.ReadBlock(this->BlockMap(endLogicBlock), writeBlockBuffer);
+            if (readByteCnt != BLOCK_SIZE) {
+                return -1;
+            }
+        }
+
+        int expectedByteCnt = (offset + size - 1) % BLOCK_SIZE + 1;
+        memcpy(writeBlockBuffer, buffer + currentBufferOffset, expectedByteCnt);
+
+        unsigned int writeByteCnt = DeviceManager::deviceManager.WriteBlock(this->BlockMap(endLogicBlock), writeBlockBuffer);
+
+        if (writeByteCnt != BLOCK_SIZE) {
             return -1;
         }
+
+        currentFileOffset += expectedByteCnt;
+        currentBufferOffset += expectedByteCnt;
     }
 
-    int expectedByteCnt = (offset + size - 1) % BLOCK_SIZE + 1;
-    memcpy(writeBlockBuffer, buffer + currentBufferOffset, expectedByteCnt);
-
-    unsigned int writeByteCnt = DeviceManager::deviceManager.WriteBlock(this->BlockMap(endLogicBlock), writeBlockBuffer);
-
-    if (writeByteCnt != BLOCK_SIZE) {
-        return -1;
-    }
-
-    currentFileOffset += expectedByteCnt;
-    currentBufferOffset += expectedByteCnt;
 
     return currentBufferOffset;
 }
 
 int MemInode::Expand(int newSize) {
     int oldBlockNum = (this->i_size - 1) / BLOCK_SIZE + 1;
+    if (this->i_size == 0) {
+        // 如果是空文件，占用0块
+        oldBlockNum = 0;
+    }
+
     int newBlockNum = (newSize - 1) / BLOCK_SIZE + 1;
 
     if (newBlockNum > 6 + 2 * 128 + 2 * 128 * 128) {

@@ -257,7 +257,7 @@ int User::Create(const string &path, int mode) {
 
     // 函数正常结束后，nameBuffer中保存有最后一个文件的名称
     if (!currentDirFile.IsDirFile()) {
-        Diagnose::PrintError(string(nameBuffer, nameBufferIdx) + " is not a dir file.");
+        Diagnose::PrintError("Parent of " + string(nameBuffer, nameBufferIdx) + " is not a dir file.");
         currentDirFile.Close();
         return -1;
     }
@@ -280,12 +280,28 @@ int User::Create(const string &path, int mode) {
     }
 
     // 创建完成后打开
-    if (-1 == OpenFile::OpenFileFactory(this->userOpenFileTable[emptyIndex], newDiskInode, this->uid, this->gid, FileFlags::FWRITE)) {
+    // 不能从OpenFileFactory构造，因为此时newDiskInode尚未写入磁盘，不能从OpenFileFactory会从磁盘中加载DiskInode
+
+    // 新建一个MemInode
+    MemInode* memInodePtr;
+    if (-1 == MemInode::MemInodeNotInit(memInodePtr)) {
         return -1;
     }
 
+    this->userOpenFileTable[emptyIndex].f_inode = memInodePtr;
+
+    // MemInode初始化
+    memInodePtr->i_flag = FileFlags::FWRITE;
     // 设置权限
-    this->userOpenFileTable[emptyIndex].f_inode->i_mode = mode;
+    memInodePtr->i_mode = mode;
+    memInodePtr->i_count = 1;
+    memInodePtr->i_nlink = 1;
+    memInodePtr->i_dev = 0;
+    memInodePtr->i_number = newDiskInode;
+    memInodePtr->i_uid = this->uid;
+    memInodePtr->i_gid = this->gid;
+    memInodePtr->i_size = 0;
+    memset(memInodePtr->i_addr, -1, 10 * sizeof(int));
 
     return emptyIndex;
 }
@@ -324,7 +340,9 @@ int User::Write(int fd, char *buffer, int size) {
         return -1;
     }
 
-    return this->userOpenFileTable[fd].Write(buffer, size);
+    int temp = this->userOpenFileTable[fd].Write(buffer, size);
+
+    return temp;
 }
 
 int User::Seek(int fd, int offset, int fromWhere) {

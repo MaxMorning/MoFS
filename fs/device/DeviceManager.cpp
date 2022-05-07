@@ -54,10 +54,10 @@ unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer, int size) {
 }
 
 int DeviceManager::ReadInode(int inodeNo, DiskInode *inodePtr) {
-    unsigned int dstOffset = 64 + inodeNo * sizeof(DiskInode);
+    unsigned int dstOffset = 64 + inodeNo * sizeof(DiskInode) + HEADER_SIG_SIZE;
     fseek(this->imgFilePtr, dstOffset, SEEK_SET);
 
-    unsigned int readByte = fread(inodePtr, sizeof(DiskInode), 1, this->imgFilePtr);
+    unsigned int readByte = fread(inodePtr,  1, sizeof(DiskInode),this->imgFilePtr);
     if (readByte != sizeof(DiskInode)) {
         return -1;
     }
@@ -66,10 +66,10 @@ int DeviceManager::ReadInode(int inodeNo, DiskInode *inodePtr) {
 }
 
 int DeviceManager::WriteInode(int inodeNo, DiskInode *inodePtr) {
-    unsigned int dstOffset = 64 + inodeNo * sizeof(DiskInode);
+    unsigned int dstOffset = 64 + inodeNo * sizeof(DiskInode) + HEADER_SIG_SIZE;
     fseek(this->imgFilePtr, dstOffset, SEEK_SET);
 
-    unsigned int writeByte = fwrite(inodePtr, sizeof(DiskInode), 1, this->imgFilePtr);
+    unsigned int writeByte = fwrite(inodePtr, 1, sizeof(DiskInode), this->imgFilePtr);
 
     if (writeByte != sizeof(DiskInode)) {
         return -1;
@@ -79,7 +79,7 @@ int DeviceManager::WriteInode(int inodeNo, DiskInode *inodePtr) {
 }
 
 int DeviceManager::LoadSuperBlock(void *superBlockPtr) {
-    fseek(this->imgFilePtr, 0, SEEK_SET);
+    fseek(this->imgFilePtr, HEADER_SIG_SIZE, SEEK_SET);
     unsigned int readByte = fread(superBlockPtr, sizeof(SuperBlock), 1, this->imgFilePtr);
 
     if (readByte != sizeof(SuperBlock)) {
@@ -93,7 +93,7 @@ int DeviceManager::LoadSuperBlock(void *superBlockPtr) {
 }
 
 int DeviceManager::StoreSuperBlock(void *superBlockPtr) {
-    fseek(this->imgFilePtr, 0, SEEK_SET);
+    fseek(this->imgFilePtr, HEADER_SIG_SIZE, SEEK_SET);
     unsigned int writeByte = fwrite(superBlockPtr, sizeof(SuperBlock), 1, this->imgFilePtr);
 
     if (writeByte != sizeof(SuperBlock)) {

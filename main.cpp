@@ -36,9 +36,14 @@ int main(int argc, char* argv[]) {
     User user{0, 0};
     int fd = user.Create("/hello.txt", 0777);
     char content[] = "HML testing";
-    user.Write(fd, content, sizeof(content));
+    int writeByteCnt = user.Write(fd, content, sizeof(content));
+    Diagnose::PrintLog("Store " + to_string(writeByteCnt) + " byte(s).");
 
     char readBuffer[1024];
+    if (-1 == user.Seek(fd, 0, SEEK_SET)) {
+        return -1;
+    }
+
     int readByteCnt = user.Read(fd, readBuffer, 1024);
     Diagnose::PrintLog("Load " + to_string(readByteCnt) + " byte(s), content " + string(readBuffer, readByteCnt));
 

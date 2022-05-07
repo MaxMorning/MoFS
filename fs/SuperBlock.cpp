@@ -39,6 +39,8 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
     superBlockRef.s_ronly = 0;
     superBlockRef.s_time = time(nullptr);
 
+    DeviceManager::deviceManager.SetOffset(HEADER_SIG_SIZE + superBlockRef.s_isize * BLOCK_SIZE + inodeSegSize);
+
     // 设置空闲块
     // 设置直接管辖的空闲块
     superBlockRef.s_nfree = (blockNum - 1) % 100 + 1;
@@ -100,6 +102,7 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
 
     DiskInode rootInode;
     rootInode.d_mode = MemInode::IALLOC | MemInode::IFDIR | 0777;
+
     rootInode.d_nlink = 1;
     rootInode.d_uid = 0;
     rootInode.d_gid = 0;
