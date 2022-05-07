@@ -22,10 +22,17 @@ DeviceManager::DeviceManager() {
 }
 
 void DeviceManager::OpenImage(const std::string &imagePath) {
-    this->imgFilePtr = fopen(imagePath.c_str(), "w+");
+    // 尝试打开映象文件
+    this->imgFilePtr = fopen(imagePath.c_str(), "rb+");
+    // 如果不存在，创建一个
     if (this->imgFilePtr == nullptr) {
-        Diagnose::PrintError("Cannot open image : " + imagePath);
-        return;
+        this->imgFilePtr = fopen(imagePath.c_str(), "wb+");
+
+        if (this->imgFilePtr == nullptr) {
+            // 如果还是打不开，那肯定有问题
+            Diagnose::PrintError("Cannot open image : " + imagePath);
+            return;
+        }
     }
 }
 
@@ -82,7 +89,7 @@ int DeviceManager::LoadSuperBlock(void *superBlockPtr) {
     fseek(this->imgFilePtr, HEADER_SIG_SIZE, SEEK_SET);
     unsigned int readByte = fread(superBlockPtr, sizeof(SuperBlock), 1, this->imgFilePtr);
 
-    if (readByte != sizeof(SuperBlock)) {
+    if (readByte != 1) {
         return -1;
     }
 
@@ -96,7 +103,7 @@ int DeviceManager::StoreSuperBlock(void *superBlockPtr) {
     fseek(this->imgFilePtr, HEADER_SIG_SIZE, SEEK_SET);
     unsigned int writeByte = fwrite(superBlockPtr, sizeof(SuperBlock), 1, this->imgFilePtr);
 
-    if (writeByte != sizeof(SuperBlock)) {
+    if (writeByte != 1) {
         return -1;
     }
 

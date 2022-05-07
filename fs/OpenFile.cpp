@@ -161,7 +161,9 @@ int OpenFile::Seek(int offset, int fromWhere) {
 }
 
 int OpenFile::OpenFileFactory(OpenFile &openFile, int diskInodeIdx, int uid, int gid, int flags) {
-    MemInode::MemInodeFactory(diskInodeIdx, openFile.f_inode);
+    if (-1 == MemInode::MemInodeFactory(diskInodeIdx, openFile.f_inode)) {
+        return -1;
+    }
 
     return openFile.Open(flags, openFile.f_inode, uid, gid);
 }

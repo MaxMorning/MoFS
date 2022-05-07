@@ -120,6 +120,14 @@ public:
      */
     int Close(int lastAccTime, int lastModTime);
 
+    /**
+     * @brief 将inode写回磁盘，不关闭文件
+     * @param lastAccTime 最后访问时间
+     * @param lastModTime 最后修改时间
+     * @return 0表示成功，-1表示失败
+     */
+    int StoreToDisk(int lastAccTime, int lastModTime);
+
     /* Members */
 public:
     unsigned int i_flag;	///< 状态的标志位，定义见enum INodeFlag

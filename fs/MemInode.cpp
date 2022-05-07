@@ -90,6 +90,8 @@ int MemInode::MemInodeNotInit(MemInode*& memInodePtr) {
     }
 
     MemInode::systemMemInodeTable[searchResult].i_used = 1;
+    memInodePtr = &(MemInode::systemMemInodeTable[searchResult]);
+
     return 0;
 }
 
@@ -144,7 +146,7 @@ int max(int a, int b) {
 }
 
 int MemInode::Read(int offset, char *buffer, int size) {
-    if (this->i_size == 0) {
+    if (this->i_size == 0 || offset >= this->i_size) {
         // 对空文件进行特判
         printf("特判被触发力！\n");
         return 0;
@@ -164,8 +166,8 @@ int MemInode::Read(int offset, char *buffer, int size) {
         return -1;
     }
 
-    int expectedByteCnt = min(size, BLOCK_SIZE - offset % BLOCK_SIZE);
-    memcpy(buffer, readBlockBuffer + (BLOCK_SIZE - expectedByteCnt), expectedByteCnt);
+    int expectedByteCnt = min(actualReadDst - currentFileOffset, BLOCK_SIZE - offset % BLOCK_SIZE);
+    memcpy(buffer, readBlockBuffer + offset % BLOCK_SIZE, expectedByteCnt);
     currentFileOffset += expectedByteCnt;
     currentBufferOffset += expectedByteCnt;
 
@@ -186,17 +188,18 @@ int MemInode::Read(int offset, char *buffer, int size) {
 
 
     // 读取最后一块，也有可能是一块完整的
-    readByteCnt = DeviceManager::deviceManager.ReadBlock(this->BlockMap(endLogicBlock), readBlockBuffer);
-    if (readByteCnt != BLOCK_SIZE) {
-        return -1;
+    if (startLogicBlock < endLogicBlock) {
+        readByteCnt = DeviceManager::deviceManager.ReadBlock(this->BlockMap(endLogicBlock), readBlockBuffer);
+        if (readByteCnt != BLOCK_SIZE) {
+            return -1;
+        }
+
+        expectedByteCnt = (actualReadDst - 1) % BLOCK_SIZE + 1;
+        memcpy(buffer + currentBufferOffset, readBlockBuffer, expectedByteCnt);
+
+        currentFileOffset += expectedByteCnt;
+        currentBufferOffset += expectedByteCnt;
     }
-
-    expectedByteCnt = (actualReadDst - 1) % BLOCK_SIZE + 1;
-    memcpy(buffer + currentBufferOffset, readBlockBuffer, expectedByteCnt);
-
-    currentFileOffset += expectedByteCnt;
-    currentBufferOffset += expectedByteCnt;
-
 
     return currentBufferOffset;
 }
@@ -308,6 +311,8 @@ int MemInode::Expand(int newSize) {
 
     if (newBlockNum == oldBlockNum) {
         // 尽管有所扩张，但占用的块数不变
+        this->i_size = newSize;
+
         return 0;
     }
 
@@ -559,6 +564,15 @@ int MemInode::ReleaseBlocks() {
 int MemInode::Close(int lastAccTime, int lastModTime) {
     assert(this->i_count == 0);
 
+    if (-1 == this->StoreToDisk(lastAccTime, lastModTime)) {
+        return -1;
+    }
+
+    this->i_used = 0;
+    return 0;
+}
+
+int MemInode::StoreToDisk(int lastAccTime, int lastModTime) {
     DiskInode diskInode;
     diskInode.d_mode = this->i_mode;
     diskInode.d_nlink = this->i_nlink;
@@ -571,10 +585,5 @@ int MemInode::Close(int lastAccTime, int lastModTime) {
     diskInode.d_atime = lastAccTime;
     diskInode.d_mtime = lastModTime;
 
-    if (-1 == DeviceManager::deviceManager.WriteInode(this->i_number, &diskInode)) {
-        return -1;
-    }
-
-    this->i_used = 0;
-    return 0;
+    return DeviceManager::deviceManager.WriteInode(this->i_number, &diskInode);
 }

@@ -30,6 +30,7 @@ int main(int argc, char* argv[]) {
     DeviceManager::deviceManager.OpenImage(imagePath);
     InitSystem();
 
+#ifdef MAKEFS
     SuperBlock::MakeFS(32 * 1024 * 1024, 2048);
     /// @todo SuperBlock的加载应当在确认选择的映象文件已经建立了文件系统之后执行，或者通过mkfs建立。
 //    DeviceManager::deviceManager.LoadSuperBlock(&SuperBlock::superBlock);
@@ -39,11 +40,26 @@ int main(int argc, char* argv[]) {
     int writeByteCnt = user.Write(fd, content, sizeof(content));
     Diagnose::PrintLog("Store " + to_string(writeByteCnt) + " byte(s).");
 
-    char readBuffer[1024];
-    if (-1 == user.Seek(fd, 0, SEEK_SET)) {
+#else
+//    SuperBlock::MakeFS(32 * 1024 * 1024, 2048);
+    DeviceManager::deviceManager.LoadSuperBlock(&SuperBlock::superBlock);
+    User user{0, 0};
+    int fd = user.Open("/hello.txt", FileFlags::FREAD | FileFlags::FWRITE);
+
+    if (-1 == user.Seek(fd, 0, SEEK_END)) {
         return -1;
     }
 
+    char content[] = "HML testing";
+    int writeByteCnt = user.Write(fd, content, sizeof(content));
+    Diagnose::PrintLog("Store " + to_string(writeByteCnt) + " byte(s).");
+
+#endif
+
+    char readBuffer[1024];
+    if (-1 == user.Seek(fd, 2, SEEK_SET)) {
+        return -1;
+    }
     int readByteCnt = user.Read(fd, readBuffer, 1024);
     Diagnose::PrintLog("Load " + to_string(readByteCnt) + " byte(s), content " + string(readBuffer, readByteCnt));
 

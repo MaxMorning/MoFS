@@ -6,6 +6,7 @@
  * @license GPL v3
  */
 #include <cassert>
+#include <ctime>
 
 #include "../include/User.h"
 #include "../include/DirEntry.h"
@@ -42,7 +43,7 @@ int SearchFileInodeByName(char* nameBuffer, int bufferSize, OpenFile& dirFile) {
         }
 
         for (int i = 0; i < readByteCnt / sizeof(DirEntry); ++i) {
-            if (entries[i].m_ino >= 0 && NameComp(nameBuffer, entries[i].m_name, bufferSize) == 0) {
+            if (entries[i].m_ino >= 0 && NameComp(nameBuffer, entries[i].m_name, bufferSize)) {
                 return entries[i].m_ino;
             }
         }
@@ -79,6 +80,11 @@ int RemoveEntryInDirFile(char* nameBuffer, int bufferSize, OpenFile& dirFile) {
                 return 0;
             }
         }
+    }
+
+    // 将更新后的inode写回磁盘
+    if (-1 == dirFile.f_inode->StoreToDisk(dirFile.f_lastAccessTime, time(nullptr))) {
+        return -1;
     }
 
     return -1;
@@ -124,10 +130,15 @@ int InsertEntryInDirFile(char* nameBuffer, int bufferSize, int inodeIdx, OpenFil
     newFileEntry.m_ino = inodeIdx;
     memcpy(newFileEntry.m_name, nameBuffer, NAME_MAX_LENGTH);
 
-    if (-1 == dirFile.Seek(1, SEEK_END)) {
+    if (-1 == dirFile.Seek(0, SEEK_END)) {
         return -1;
     }
     if (-1 == dirFile.Write((char*)&newFileEntry, sizeof(DirEntry))) {
+        return -1;
+    }
+
+    // 将更新后的inode写回磁盘
+    if (-1 == dirFile.f_inode->StoreToDisk(dirFile.f_lastAccessTime, time(nullptr))) {
         return -1;
     }
 
@@ -153,6 +164,7 @@ int User::GetDirFile(const string& path, OpenFile& currentDirFile, char* nameBuf
     }
 
 
+    memset(nameBuffer, 0, NAME_MAX_LENGTH);
     nameBufferIdx = 0;
     for (; pathStrIdx < path.length(); ++pathStrIdx) {
         if (path[pathStrIdx] == '/') {
@@ -175,6 +187,9 @@ int User::GetDirFile(const string& path, OpenFile& currentDirFile, char* nameBuf
                         if (-1 == OpenFile::OpenFileFactory(currentDirFile, currentDiskInodeIndex, this->uid, this->gid, FileFlags::FREAD)) {
                             return -1;
                         }
+
+                        memset(nameBuffer, 0, NAME_MAX_LENGTH);
+                        nameBufferIdx = 0;
                     }
                 }
                 else {

@@ -176,6 +176,7 @@ int SuperBlock::AllocDiskInode() {
 
     --(this->s_ninode);
     int freeInode = this->s_inode[this->s_ninode];
+    this->s_inode[this->s_ninode] = 0;
 
     if (this->s_ninode == 0) {
         // 直接管辖的inode已经耗尽，需要重新从加载一批
