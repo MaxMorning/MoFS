@@ -1,10 +1,11 @@
-/**
+﻿/**
  * @file User.cpp
  * @brief 
  * @author 韩孟霖
  * @date 2022/5/6
  * @license GPL v3
  */
+#include <cassert>
 
 #include "../include/User.h"
 #include "../include/DirEntry.h"

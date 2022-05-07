@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file DeviceManager.cpp
  * @brief 设备管理器实现，负责和映象文件进行I/O
  * @author 韩孟霖

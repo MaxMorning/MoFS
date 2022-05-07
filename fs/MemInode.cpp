@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file MemInode.cpp
  * @brief 内存Inode实现
  * @author 韩孟霖
@@ -7,6 +7,7 @@
  */
 #include <cstring>
 #include <ctime>
+#include <cassert>
 
 #include "../include/device/DeviceManager.h"
 #include "../include/MemInode.h"

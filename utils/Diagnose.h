@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file Diagnose.h
  * @brief 负责输出日志和报错
  * @author 韩孟霖

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file DeviceManager.h
  * @brief 块设备管理器，包含缓存机制
  * @author 韩孟霖

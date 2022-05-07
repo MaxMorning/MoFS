@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file OpenFile.h
  * @brief 文件类，每个实例代表一个打开的文件
  * @author 韩孟霖
