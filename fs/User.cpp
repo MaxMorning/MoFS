@@ -36,6 +36,7 @@ int SearchFileInodeByName(char* nameBuffer, int bufferSize, OpenFile& dirFile) {
     DirEntry entries[BLOCK_SIZE / sizeof(DirEntry)];
 
     int readByteCnt = 0;
+    dirFile.Seek(0, SEEK_SET);
     while (true) {
         readByteCnt = dirFile.Read((char* )entries, BLOCK_SIZE);
         if (readByteCnt <= 0) {
@@ -64,6 +65,7 @@ int RemoveEntryInDirFile(char* nameBuffer, int bufferSize, OpenFile& dirFile) {
     DirEntry entries[BLOCK_SIZE / sizeof(DirEntry)];
 
     int readByteCnt = 0;
+    dirFile.Seek(0, SEEK_SET);
     while (true) {
         readByteCnt = dirFile.Read((char* )entries, BLOCK_SIZE);
         if (readByteCnt <= 0) {
@@ -71,20 +73,21 @@ int RemoveEntryInDirFile(char* nameBuffer, int bufferSize, OpenFile& dirFile) {
         }
 
         for (int i = 0; i < readByteCnt / sizeof(DirEntry); ++i) {
-            if (entries[i].m_ino >= 0 && NameComp(nameBuffer, entries[i].m_name, bufferSize) == 0) {
+            if (entries[i].m_ino >= 0 && NameComp(nameBuffer, entries[i].m_name, bufferSize)) {
                 entries[i].m_ino = -1; // 将ino标记为-1，设置为空闲
 
                 // 写回
                 dirFile.Seek(-1 * readByteCnt, SEEK_CUR);
                 dirFile.Write((char*)entries, readByteCnt);
+
+                // 将更新后的inode写回磁盘
+                if (-1 == dirFile.f_inode->StoreToDisk(dirFile.f_lastAccessTime, time(nullptr))) {
+                    return -1;
+                }
+
                 return 0;
             }
         }
-    }
-
-    // 将更新后的inode写回磁盘
-    if (-1 == dirFile.f_inode->StoreToDisk(dirFile.f_lastAccessTime, time(nullptr))) {
-        return -1;
     }
 
     return -1;
@@ -102,6 +105,7 @@ int InsertEntryInDirFile(char* nameBuffer, int bufferSize, int inodeIdx, OpenFil
     DirEntry entries[BLOCK_SIZE / sizeof(DirEntry)];
 
     int readByteCnt = 0;
+    dirFile.Seek(0, SEEK_SET);
     while (true) {
         readByteCnt = dirFile.Read((char* )entries, BLOCK_SIZE);
         if (readByteCnt <= 0) {
@@ -120,6 +124,12 @@ int InsertEntryInDirFile(char* nameBuffer, int bufferSize, int inodeIdx, OpenFil
                 if (-1 == dirFile.Write((char*)entries, readByteCnt)) {
                     return -1;
                 }
+
+                // 将更新后的inode写回磁盘
+                if (-1 == dirFile.f_inode->StoreToDisk(dirFile.f_lastAccessTime, time(nullptr))) {
+                    return -1;
+                }
+
                 return 0;
             }
         }
@@ -285,6 +295,14 @@ int User::Create(const string &path, int mode) {
     }
     currentDirFile.f_inode->i_flag = FileFlags::FWRITE;
 
+    // 检查currentDirFile中是否已经存在同名文件
+    int checkExist = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
+    if (checkExist != -1) {
+        // 当前Dir已经存在，创建失败
+        Diagnose::PrintError("File already exist");
+        return -1;
+    }
+
     int newDiskInode = SuperBlock::superBlock.AllocDiskInode();
     if (newDiskInode == -1) {
         Diagnose::PrintError("No more inode available");
@@ -296,7 +314,7 @@ int User::Create(const string &path, int mode) {
     }
 
     // 创建完成后打开
-    // 不能从OpenFileFactory构造，因为此时newDiskInode尚未写入磁盘，不能从OpenFileFactory会从磁盘中加载DiskInode
+    // 不能从OpenFileFactory构造，因为此时newDiskInode尚未写入磁盘，而OpenFileFactory会从磁盘中加载DiskInode
 
     // 新建一个MemInode
     MemInode* memInodePtr;
@@ -333,6 +351,10 @@ int User::GetEmptyEntry() {
 }
 
 int User::Close(int fd) {
+    if (fd < 0) {
+        Diagnose::PrintError("Bad file descriptor.");
+        return -1;
+    }
     if (this->userOpenFileTable[fd].Close() == -1) {
         return -1;
     }
@@ -395,6 +417,7 @@ int User::Unlink(const string &path) {
 
     int diskInode = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
     if (diskInode == -1) {
+        Diagnose::PrintError("File not exist.");
         return -1;
     }
 
@@ -404,17 +427,16 @@ int User::Unlink(const string &path) {
         return -1;
     }
 
-    // 处理对应的DiskInode
-    DiskInode unlinkedDiskInode;
-    if (-1 == DiskInode::DiskInodeFactory(diskInode, unlinkedDiskInode)) {
+    // 处理对应的DiskInode，应该操作OpenFile而非直接操作DiskInode
+    OpenFile unlinkedOpenFile;
+    if (-1 == OpenFile::OpenFileFactory(unlinkedOpenFile, diskInode, this->uid, this->gid, FileFlags::FWRITE)) {
         return -1;
     }
 
-    unlinkedDiskInode.d_nlink--;
-
+    unlinkedOpenFile.f_inode->i_nlink--;
     // link数为0，需要释放DiskInode
-    if (unlinkedDiskInode.d_nlink == 0) {
-        if (-1 == unlinkedDiskInode.ReleaseBlocks()) {
+    if (unlinkedOpenFile.f_inode->i_nlink == 0) {
+        if (-1 == unlinkedOpenFile.f_inode->ReleaseBlocks()) {
             return -1;
         }
 
@@ -422,7 +444,13 @@ int User::Unlink(const string &path) {
             return -1;
         }
     }
-    return 0;
+    else {
+        // 该文件仍然有连接，需要将更新后的 inode 写回磁盘中
+        int currentTime = time(nullptr);
+        unlinkedOpenFile.f_inode->StoreToDisk(currentTime, currentTime);
+    }
+
+    return unlinkedOpenFile.Close();
 }
 
 User::User(int uid, int gid) {

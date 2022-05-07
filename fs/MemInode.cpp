@@ -148,7 +148,6 @@ int max(int a, int b) {
 int MemInode::Read(int offset, char *buffer, int size) {
     if (this->i_size == 0 || offset >= this->i_size) {
         // 对空文件进行特判
-        printf("特判被触发力！\n");
         return 0;
     }
 
@@ -573,6 +572,10 @@ int MemInode::Close(int lastAccTime, int lastModTime) {
 }
 
 int MemInode::StoreToDisk(int lastAccTime, int lastModTime) {
+    if (this->i_nlink <= 0) {
+        // 当前待保存的MemInode已经没有连接，直接返回即可
+        return 0;
+    }
     DiskInode diskInode;
     diskInode.d_mode = this->i_mode;
     diskInode.d_nlink = this->i_nlink;

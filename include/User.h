@@ -45,9 +45,9 @@ public:
     int Close(int fd);
 
     /**
-     * 创建文件
+     * 创建文件，也可创建目录文件
      * @param path 目标路径
-     * @param mode 各用户的RWX权限
+     * @param mode 各用户的mode, 包括文件类型（目录/文件）、RWX权限等
      * @return 创建的file descriptor，-1表示出错
      */
     int Create(const string& path, int mode);

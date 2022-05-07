@@ -29,7 +29,7 @@ enum FileFlags
 class OpenFile {
 public:
     /**
-     * @brief OpenFile工厂
+     * @brief OpenFile工厂，构建并打开OpenFile结构，但不分配fd
      * @param openFile 返回openFile
      * @param diskInodeIdx DiskInode序号
      * @param uid user id
