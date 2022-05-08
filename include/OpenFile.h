@@ -96,6 +96,12 @@ public:
      */
     bool IsDirFile();
 
+    /**
+     * @brief 判断该目录文件是否有内容
+     * @return
+     */
+    bool HaveFilesInDir();
+
     /* Member */
     unsigned int    f_flag;		    ///< 对打开文件的读、写操作要求
     int		        f_count;		///< 当前引用该文件控制块的进程数量

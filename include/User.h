@@ -53,6 +53,14 @@ public:
     int Create(const string& path, int mode);
 
     /**
+     * @brief 设置硬链接
+     * @param srcPath 被链接的文件路径，可以是目录文件
+     * @param dstPath 目标文件路径
+     * @return 0表示成功，-1表示错误
+     */
+    int Link(const string& srcPath, const string& dstPath);
+
+    /**
      * @brief 删除文件，如果链接数大于1，不会真的删除，而是取消path的链接
      * @param path 目标路径
      * @return 0表示成功，-1表示错误

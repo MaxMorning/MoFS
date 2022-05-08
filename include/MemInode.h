@@ -113,7 +113,7 @@ public:
     int ReleaseBlocks();
 
     /**
-     * @brief 关闭inode，写回磁盘
+     * @brief 关闭inode，写回磁盘，需要保证没有OpenFile指向this
      * @param lastAccTime 最后访问时间
      * @param lastModTime 最后修改时间
      * @return 0表示成功，-1表示失败

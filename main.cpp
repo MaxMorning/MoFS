@@ -22,6 +22,11 @@ int InitSystem() {
     return 0;
 }
 
+int shutdown() {
+    // 写回SuperBlock
+    return DeviceManager::deviceManager.StoreSuperBlock(&SuperBlock::superBlock);
+}
+
 int main(int argc, char* argv[]) {
     // 解析输入参数
     string imagePath = "1.img";
@@ -74,8 +79,16 @@ int main(int argc, char* argv[]) {
     user.Close(fd);
 
 #else
+//    SuperBlock::MakeFS(16 * 1024 * 1024, 2048);
     DeviceManager::deviceManager.LoadSuperBlock(&SuperBlock::superBlock);
     User user{0, 0};
+//    if (-1 == user.Unlink("/hello2")) {
+//        Diagnose::PrintError("Cannot unlink /hello2");
+//    }
+//    else {
+//        Diagnose::PrintLog("/hello2 unlinked.");
+//    }
+//
 //    int fd = user.Create("/hello2", MemInode::IALLOC | MemInode::IFDIR | 0777);
 //
 //    if (fd != -1) {
@@ -91,6 +104,11 @@ int main(int argc, char* argv[]) {
 
     user.Close(fd2);
 
+    if (-1 == user.Link("/hello2/2.txt", "3.txt")) {
+        Diagnose::PrintError("Cannot link 3.txt");
+    }
+
+
     if (-1 == user.Unlink("/hello2/2.txt")) {
         Diagnose::PrintError("Cannot unlink /hello2/2.txt");
     }
@@ -98,14 +116,19 @@ int main(int argc, char* argv[]) {
         Diagnose::PrintLog("/hello2/2.txt unlinked.");
     }
 
-    if (-1 == user.Unlink("2.txt")) {
-        Diagnose::PrintError("Cannot unlink 2.txt");
+
+    if (-1 == user.Unlink("3.txt")) {
+        Diagnose::PrintError("Cannot unlink 3.txt");
     }
     else {
-        Diagnose::PrintLog("2.txt unlinked.");
+        Diagnose::PrintLog("3.txt unlinked.");
     }
 
 #endif
 
+    if (-1 == shutdown()) {
+        Diagnose::PrintError("Shutdown error.");
+        exit(-1);
+    }
     return 0;
 }

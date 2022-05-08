@@ -9,10 +9,17 @@
 
 #include "../utils/Diagnose.h"
 #include "../include/OpenFile.h"
+#include "../include/DirEntry.h"
 
 #define BLOCK_SIZE 512
 
 int OpenFile::Read(char *buffer, int size) {
+    // 权限检查
+    if ((this->f_flag & FileFlags::FREAD) != FileFlags::FREAD) {
+        Diagnose::PrintError("Read operation denied because of permission.");
+        return 0;
+    }
+
     int returnValue = this->f_inode->Read(this->f_offset, buffer, size);
 
     if (returnValue >= 0) {
@@ -24,6 +31,12 @@ int OpenFile::Read(char *buffer, int size) {
 }
 
 int OpenFile::Write(char *buffer, int size) {
+    // 权限检查
+    if ((this->f_flag & FileFlags::FWRITE) != FileFlags::FWRITE) {
+        Diagnose::PrintError("Write operation denied because of permission.");
+        return 0;
+    }
+
     int returnValue = this->f_inode->Write(this->f_offset, buffer, size);
 
     if (returnValue > 0) {
@@ -170,4 +183,29 @@ int OpenFile::OpenFileFactory(OpenFile &openFile, int diskInodeIdx, int uid, int
 
 bool OpenFile::IsDirFile() {
     return (this->f_inode->i_mode & MemInode::IFMT) == MemInode::IFDIR;
+}
+
+bool OpenFile::HaveFilesInDir() {
+    if (!this->IsDirFile()) {
+        return false;
+    }
+
+    // 逐块读取并查找
+    DirEntry entries[BLOCK_SIZE / sizeof(DirEntry)];
+
+    int readByteCnt = 0;
+    this->Seek(0, SEEK_SET);
+    while (true) {
+        readByteCnt = this->Read((char* )entries, BLOCK_SIZE);
+        if (readByteCnt <= 0) {
+            break;
+        }
+
+        for (int i = 0; i < readByteCnt / sizeof(DirEntry); ++i) {
+            if (entries[i].m_ino >= 0) {
+                return true;
+            }
+        }
+    }
+    return false;
 }

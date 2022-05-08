@@ -392,6 +392,67 @@ int User::Seek(int fd, int offset, int fromWhere) {
     return this->userOpenFileTable[fd].Seek(offset, fromWhere);
 }
 
+
+int User::Link(const string &srcPath, const string &dstPath) {
+    // 找到srcPath的inode
+    OpenFile currentDirFile;
+    char nameBuffer[NAME_MAX_LENGTH];
+    int nameBufferIdx;
+
+    if (this->GetDirFile(srcPath, currentDirFile, nameBuffer, nameBufferIdx) == -1) {
+        return -1;
+    }
+
+    // 函数正常结束后，nameBuffer中保存有最后一个文件的名称
+    if (!currentDirFile.IsDirFile()) {
+        Diagnose::PrintError(string(nameBuffer, nameBufferIdx) + " is not a dir file.");
+        currentDirFile.Close();
+        return -1;
+    }
+
+    int srcDiskInode = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
+    if (srcDiskInode == -1) {
+        Diagnose::PrintError("File not exist.");
+        return -1;
+    }
+
+
+
+    // 处理目标路径
+    if (this->GetDirFile(dstPath, currentDirFile, nameBuffer, nameBufferIdx) == -1) {
+        return -1;
+    }
+
+    // 函数正常结束后，nameBuffer中保存有最后一个文件的名称
+    if (!currentDirFile.IsDirFile()) {
+        Diagnose::PrintError("Parent of " + string(nameBuffer, nameBufferIdx) + " is not a dir file.");
+        currentDirFile.Close();
+        return -1;
+    }
+
+    // 此时currentDirFile是以read权限打开的，需要检查write权限
+    if (!currentDirFile.CheckFlags(FileFlags::FWRITE, this->uid, this->gid)) {
+        Diagnose::PrintError("Don't have permission to write.");
+        return -1;
+    }
+    currentDirFile.f_inode->i_flag = FileFlags::FWRITE;
+
+    // 检查currentDirFile中是否已经存在同名文件
+    int checkExist = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
+    if (checkExist != -1) {
+        // 当前Dir已经存在，创建失败
+        Diagnose::PrintError("File already exist");
+        return -1;
+    }
+
+    if (-1 == InsertEntryInDirFile(nameBuffer, nameBufferIdx, srcDiskInode, currentDirFile)) {
+        Diagnose::PrintError("Cannot insert entry into dir");
+        return -1;
+    }
+    return 0;
+}
+
+
 int User::Unlink(const string &path) {
     OpenFile currentDirFile;
     char nameBuffer[NAME_MAX_LENGTH];
@@ -421,12 +482,6 @@ int User::Unlink(const string &path) {
         return -1;
     }
 
-    // 在父目录处删除这一条记录
-    if (-1 == RemoveEntryInDirFile(nameBuffer, nameBufferIdx, currentDirFile)) {
-        Diagnose::PrintError("Cannot delete entry from parent dir.");
-        return -1;
-    }
-
     // 处理对应的DiskInode，应该操作OpenFile而非直接操作DiskInode
     OpenFile unlinkedOpenFile;
     if (-1 == OpenFile::OpenFileFactory(unlinkedOpenFile, diskInode, this->uid, this->gid, FileFlags::FWRITE)) {
@@ -436,6 +491,12 @@ int User::Unlink(const string &path) {
     unlinkedOpenFile.f_inode->i_nlink--;
     // link数为0，需要释放DiskInode
     if (unlinkedOpenFile.f_inode->i_nlink == 0) {
+        // 检查该DiskInode是否是目录，如果是，检查是否为空。不允许删除有内容的目录
+        if (unlinkedOpenFile.HaveFilesInDir()) {
+            Diagnose::PrintError("Cannot delete a dir with files.");
+            return -1;
+        }
+
         if (-1 == unlinkedOpenFile.f_inode->ReleaseBlocks()) {
             return -1;
         }
@@ -448,6 +509,12 @@ int User::Unlink(const string &path) {
         // 该文件仍然有连接，需要将更新后的 inode 写回磁盘中
         int currentTime = time(nullptr);
         unlinkedOpenFile.f_inode->StoreToDisk(currentTime, currentTime);
+    }
+
+    // 在父目录处删除这一条记录
+    if (-1 == RemoveEntryInDirFile(nameBuffer, nameBufferIdx, currentDirFile)) {
+        Diagnose::PrintError("Cannot delete entry from parent dir.");
+        return -1;
     }
 
     return unlinkedOpenFile.Close();
