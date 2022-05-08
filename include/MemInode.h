@@ -130,7 +130,8 @@ public:
 
     /* Members */
 public:
-    unsigned int i_flag;	///< 状态的标志位，定义见enum INodeFlag
+    // 由于DiskInode的缓存机制的存在，不需要i_flag机制来减少磁盘I/O
+//    unsigned int i_flag;	///< 状态的标志位，定义见enum INodeFlag
     unsigned int i_mode;	///< 文件工作方式信息
 
     int		i_count;		///< 引用计数，指的是有多少OpenFile连接至此

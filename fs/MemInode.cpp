@@ -53,7 +53,7 @@ int MemInode::MemInodeFactory(int diskInodeIdx, MemInode*& memInodePtr) {
 
     MemInode& memInode = MemInode::systemMemInodeTable[searchResult];
 
-    memInode.i_flag = 0;
+//    memInode.i_flag = 0;
     memInode.i_mode = diskInode.d_mode;
 
     memInode.i_count = 0;

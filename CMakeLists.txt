@@ -13,4 +13,4 @@ add_executable(MoFS
         utils/Diagnose.h utils/Diagnose.cpp
         include/User.h fs/User.cpp
         include/DiskInode.h fs/DiskInode.cpp
-        )
+        include/Primitive.h fs/Primitive.cpp)

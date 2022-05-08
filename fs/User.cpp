@@ -15,6 +15,8 @@
 
 #define BLOCK_SIZE 512
 
+// 默认情况下
+User User::user{0, 0};
 
 bool NameComp(const char* name1, const char* name2, int size) {
     for (int i = 0; i < size; ++i) {
@@ -293,7 +295,7 @@ int User::Create(const string &path, int mode) {
         Diagnose::PrintError("Don't have permission to write.");
         return -1;
     }
-    currentDirFile.f_inode->i_flag = FileFlags::FWRITE;
+    currentDirFile.f_flag |= FileFlags::FWRITE;
 
     // 检查currentDirFile中是否已经存在同名文件
     int checkExist = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
@@ -325,7 +327,7 @@ int User::Create(const string &path, int mode) {
     this->userOpenFileTable[emptyIndex].f_inode = memInodePtr;
 
     // MemInode初始化
-    memInodePtr->i_flag = FileFlags::FWRITE;
+//    memInodePtr->i_flag = INodeFlag::IUPD | INodeFlag::IACC;
     // 设置权限
     memInodePtr->i_mode = mode;
     memInodePtr->i_count = 1;
@@ -435,7 +437,7 @@ int User::Link(const string &srcPath, const string &dstPath) {
         Diagnose::PrintError("Don't have permission to write.");
         return -1;
     }
-    currentDirFile.f_inode->i_flag = FileFlags::FWRITE;
+    currentDirFile.f_flag |= FileFlags::FWRITE;
 
     // 检查currentDirFile中是否已经存在同名文件
     int checkExist = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
@@ -474,7 +476,7 @@ int User::Unlink(const string &path) {
         Diagnose::PrintError("Don't have permission to write.");
         return -1;
     }
-    currentDirFile.f_inode->i_flag = FileFlags::FWRITE;
+    currentDirFile.f_flag |= FileFlags::FWRITE;
 
     int diskInode = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
     if (diskInode == -1) {
