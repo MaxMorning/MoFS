@@ -105,3 +105,11 @@ int mofs_link(const char *srcpath, const char *dstpath) {
 int mofs_unlink(const char *pathname) {
     return User::userPtr->Unlink(pathname);
 }
+
+int mofs_stat(const char *pathname, struct FileStat *statbuf) {
+    return User::userPtr->GetStat(pathname, statbuf);
+}
+
+int mofs_inode_stat(int inodeIndex, struct FileStat *statbuf) {
+    return User::GetInodeStat(inodeIndex, statbuf);
+}

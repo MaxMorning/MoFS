@@ -21,4 +21,19 @@ public:
     char m_name[NAME_MAX_LENGTH];     ///< 文件名
 };
 
+
+/**
+ * @brief 文件信息结构体，对标UNIX中 sys/stat.h 的 stat 结构体，有删改
+ */
+struct FileStat {
+    int st_ino;     ///< 文件的inode序号
+    unsigned int st_mode;    ///< 文件的mode（RWX权限等）
+    int st_nlink;   ///< 硬链接数
+    int st_uid;     ///< user id
+    int st_gid;     ///< group id
+    int st_size;    ///< 文件字节数
+    int st_atime;   ///< 最近访问时间
+    int st_mtime;   ///< 最近修改时间
+
+};
 #endif //MOFS_DIRENTRY_H

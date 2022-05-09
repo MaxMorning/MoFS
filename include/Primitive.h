@@ -12,6 +12,7 @@
 #define MOFS_PRIMITIVE_H
 
 #include "OpenFile.h"
+#include "DirEntry.h"
 
 /**
  * @brief 创建普通文件，并以只读方式打开
@@ -86,6 +87,22 @@ int mofs_link(const char *srcpath, const char *dstpath);
  * @return 0为成功，-1为失败
  */
 int mofs_unlink(const char *pathname);
+
+/**
+ * @brief 获取文件信息
+ * @param pathname 路径
+ * @param statbuf 存放返回信息的缓冲区
+ * @return 0为成功，-1为失败
+ */
+int mofs_stat(const char *pathname, struct FileStat* statbuf);
+
+/**
+ * @brief 根据文件inode获取信息
+ * @param inodeIndex inode序号
+ * @param statbuf 返回值缓冲区
+ * @return 0表示成功，-1表示失败
+ */
+int mofs_inode_stat(int inodeIndex, struct FileStat *statbuf);
 
 // 以下为mofs_open函数中oflags可使用的选项
 // 以下三项必须三选一

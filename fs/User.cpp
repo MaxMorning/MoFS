@@ -34,6 +34,9 @@ bool NameComp(const char* name1, const char* name2, int size) {
  * @return DiskInode序号，-1为错误
  */
 int SearchFileInodeByName(char* nameBuffer, int bufferSize, OpenFile& dirFile) {
+    if (bufferSize == 0) {
+        return dirFile.f_inode->i_number;
+    }
     // 逐块读取并查找
     DirEntry entries[BLOCK_SIZE / sizeof(DirEntry)];
 
@@ -554,5 +557,52 @@ User::User(int uid, int gid) {
     memset(this->userOpenFileTable, 0, USER_OPEN_FILE_TABLE_SIZE * sizeof(OpenFile));
 
     MemInode::MemInodeFactory(SuperBlock::superBlock.s_rootInode, this->currentWorkDir);
+}
+
+int User::GetStat(const char *path, struct FileStat *stat_buf) {
+    // 基于path找到对应inode
+    OpenFile currentDirFile;
+    char nameBuffer[NAME_MAX_LENGTH];
+    int nameBufferIdx;
+
+    if (this->GetDirFile(path, currentDirFile, nameBuffer, nameBufferIdx) == -1) {
+        return -1;
+    }
+
+    // 函数正常结束后，nameBuffer中保存有最后一个文件的名称
+    if (!currentDirFile.IsDirFile()) {
+        MoFSErrno = 6;
+        Diagnose::PrintError("This is not a dir file.");
+        currentDirFile.Close();
+        return -1;
+    }
+
+    int targetInode = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
+    if (targetInode == -1) {
+        MoFSErrno = 2;
+        Diagnose::PrintError("File not exist.");
+        return -1;
+    }
+
+    return User::GetInodeStat(targetInode, stat_buf);
+}
+
+int User::GetInodeStat(int inodeIdx, struct FileStat *stat_buf) {
+    // 这里直接使用DiskInode。虽然有越级之嫌，但不需要修改mtime和atime。
+    DiskInode diskInode;
+    if (-1 == DiskInode::DiskInodeFactory(inodeIdx, diskInode)) {
+        return -1;
+    }
+
+    stat_buf->st_ino = inodeIdx;
+    stat_buf->st_mode = diskInode.d_mode;
+    stat_buf->st_nlink = diskInode.d_nlink;
+    stat_buf->st_uid = diskInode.d_uid;
+    stat_buf->st_gid = diskInode.d_gid;
+    stat_buf->st_size = diskInode.d_size;
+    stat_buf->st_atime = diskInode.d_atime;
+    stat_buf->st_mtime = diskInode.d_mtime;
+
+    return 0;
 }
 

@@ -14,6 +14,7 @@
 #include "SuperBlock.h"
 #include "MemInode.h"
 #include "OpenFile.h"
+#include "DirEntry.h"
 
 #define USER_OPEN_FILE_TABLE_SIZE 256
 
@@ -94,6 +95,22 @@ public:
      * @return 0表示成功，-1表示失败
      */
     int Seek(int fd, int offset, int fromWhere);
+
+    /**
+     * @brief 获取文件信息
+     * @param path 路径
+     * @param stat_buf 返回值缓冲区
+     * @return 0表示成功，-1表示失败
+     */
+    int GetStat(const char *path, struct FileStat* stat_buf);
+
+    /**
+     * @brief 根据文件inode获取信息
+     * @param inodeIdx inode序号
+     * @param stat_buf 返回值缓冲区
+     * @return 0表示成功，-1表示失败
+     */
+    static int GetInodeStat(int inodeIdx, struct FileStat* stat_buf);
 
     MemInode* currentWorkDir;
     int uid;
