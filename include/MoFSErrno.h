@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file MoFSErrno.h
  * @brief 类似于Linux的errno，当出错时被设置
  * @author 韩孟霖

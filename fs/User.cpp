@@ -252,7 +252,7 @@ int User::Open(const char *path, int flags) {
         int currentDiskInodeIndex = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
         if (currentDiskInodeIndex == -1) {
             MoFSErrno = 2;
-            Diagnose::PrintError("Dir not found.");
+            Diagnose::PrintError("No such file.");
             return -1;
         }
         else {
@@ -510,7 +510,7 @@ int User::Unlink(const char *path) {
 
     // 处理对应的DiskInode，应该操作OpenFile而非直接操作DiskInode
     OpenFile unlinkedOpenFile;
-    if (-1 == OpenFile::OpenFileFactory(unlinkedOpenFile, diskInode, this->uid, this->gid, FileFlags::FWRITE)) {
+    if (-1 == OpenFile::OpenFileFactory(unlinkedOpenFile, diskInode, this->uid, this->gid, FileFlags::FREAD | FileFlags::FWRITE)) {
         return -1;
     }
 

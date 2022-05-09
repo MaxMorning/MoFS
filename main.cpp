@@ -42,7 +42,6 @@ int main(int argc, char* argv[]) {
 
     // 初始化
     DeviceManager::deviceManager.OpenImage(imagePath);
-    InitSystem();
 
 //#define MAKEFS
 
@@ -91,6 +90,8 @@ int main(int argc, char* argv[]) {
 //    SuperBlock::MakeFS(16 * 1024 * 1024, 2048);
     DeviceManager::deviceManager.LoadSuperBlock(&SuperBlock::superBlock);
 
+    InitSystem();
+
     if (-1 == mofs_unlink("/hello2")) {
         Diagnose::PrintErrno("Cannot unlink /hello2");
     }
@@ -98,15 +99,15 @@ int main(int argc, char* argv[]) {
         Diagnose::PrintLog("/hello2 unlinked.");
     }
 
-    int fd = mofs_mkdir("/hello2", 0777);
+    int mk_result = mofs_mkdir("/hello2", 0777);
 
-    if (fd != -1) {
+    if (mk_result != -1) {
         Diagnose::PrintLog("hello2 dir created");
     }
     else {
         Diagnose::PrintErrno("Cannot create /hello2");
     }
-    mofs_close(fd);
+
 
     int fd2 = mofs_creat("/hello2/2.txt", 0777);
 
@@ -121,13 +122,11 @@ int main(int argc, char* argv[]) {
     }
 
 
-    if (-1 == mofs_unlink("/hello2/2.txt")) {
-        Diagnose::PrintErrno("Cannot unlink /hello2/2.txt");
-    }
-    else {
-        Diagnose::PrintLog("/hello2/2.txt unlinked.");
-    }
+    int fd3 = mofs_open("3.txt", O_WRONLY, 0);
 
+    int write_byte_cnt = mofs_write(fd3, (void *) "Hello Morning!", 20);
+    Diagnose::PrintLog("Write " + to_string(write_byte_cnt) + " byte(s) to 3.txt.");
+    mofs_close(fd3);
 
     if (-1 == mofs_unlink("3.txt")) {
         Diagnose::PrintError("Cannot unlink 3.txt");
@@ -135,6 +134,21 @@ int main(int argc, char* argv[]) {
     else {
         Diagnose::PrintLog("3.txt unlinked.");
     }
+
+    fd2 = mofs_open("/hello2/2.txt", O_RDONLY, 0);
+    char read_buffer[64];
+    int read_byte_cnt = mofs_read(fd2, read_buffer, 64);
+    Diagnose::PrintLog("Read " + to_string(read_byte_cnt) + " byte(s) from 2.txt, content : " + string{read_buffer});
+
+    mofs_close(fd2);
+
+    if (-1 == mofs_unlink("/hello2/2.txt")) {
+        Diagnose::PrintErrno("Cannot unlink /hello2/2.txt");
+    }
+    else {
+        Diagnose::PrintLog("/hello2/2.txt unlinked.");
+    }
+
 
 #endif
 

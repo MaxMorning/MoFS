@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file Primitive.cpp
  * @brief 原语实现文件
  * @mainpage Primitive
@@ -9,6 +9,7 @@
 
 #include "../include/Primitive.h"
 #include "../include/User.h"
+#include "../include/MoFSErrno.h"
 
 int mofs_creat(const char *pathname, int mode) {
     // 掩码处理传入的mode参数，只保留最低9bit
@@ -33,7 +34,44 @@ int mofs_mkdir(const char *pathname, int mode) {
 
 int mofs_open(const char *pathname, int oflags,int mode) {
     int open_fd = User::userPtr->Open(pathname, oflags & 0x3);
-    throw "Not implemented!";
+    if (open_fd < 0) {
+        if (MoFSErrno == 2) {
+            // 文件不存在，或者路径有误
+            if ((oflags & O_CREAT) == O_CREAT) {
+                // 调用者要求创建
+                MoFSErrno = 0;
+                open_fd = User::userPtr->Create(pathname, mode & 0777);
+                if (open_fd < 0) {
+                    // 这时候还找不到文件或目录，说明路径有问题
+                    return -1;
+                }
+
+                // 成功创建
+                return open_fd;
+            }
+            else {
+                return -1;
+            }
+        }
+        else {
+            // 遇到了其它错误
+            return -1;
+        }
+    }
+
+    // 这里开始，open_fd >= 0，需要处理append和directory
+    if ((oflags & O_DIRECTORY) == O_DIRECTORY) {
+        if (!User::userPtr->userOpenFileTable[open_fd].IsDirFile()) {
+            MoFSErrno = 6;
+            return User::userPtr->Close(open_fd);
+        }
+    }
+
+    if ((oflags & O_APPEND) == O_APPEND) {
+        mofs_lseek(open_fd, 1, SEEK_END);
+    }
+
+    return open_fd;
 }
 
 int mofs_read(int fd, void *buffer, int count) {
