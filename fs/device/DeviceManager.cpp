@@ -8,6 +8,7 @@
 #include "../../utils/Diagnose.h"
 #include "../../include/device/DeviceManager.h"
 #include "../../include/SuperBlock.h"
+#include "../../include/MoFSErrno.h"
 
 /// 映象文件的默认偏移量
 #define DEFAULT_OFFSET 256 * 1024
@@ -30,6 +31,7 @@ void DeviceManager::OpenImage(const char *imagePath) {
 
         if (this->imgFilePtr == nullptr) {
             // 如果还是打不开，那肯定有问题
+            MoFSErrno = 19;
             Diagnose::PrintError("Cannot open image : " + std::string(imagePath));
             return;
         }
@@ -66,6 +68,7 @@ int DeviceManager::ReadInode(int inodeNo, DiskInode *inodePtr) {
 
     unsigned int readByte = fread(inodePtr,  1, sizeof(DiskInode),this->imgFilePtr);
     if (readByte != sizeof(DiskInode)) {
+        MoFSErrno = 16;
         return -1;
     }
 
@@ -79,6 +82,7 @@ int DeviceManager::WriteInode(int inodeNo, DiskInode *inodePtr) {
     unsigned int writeByte = fwrite(inodePtr, 1, sizeof(DiskInode), this->imgFilePtr);
 
     if (writeByte != sizeof(DiskInode)) {
+        MoFSErrno = 16;
         return -1;
     }
 
@@ -90,6 +94,7 @@ int DeviceManager::LoadSuperBlock(void *superBlockPtr) {
     unsigned int readByte = fread(superBlockPtr, sizeof(SuperBlock), 1, this->imgFilePtr);
 
     if (readByte != 1) {
+        MoFSErrno = 16;
         return -1;
     }
 
@@ -104,6 +109,7 @@ int DeviceManager::StoreSuperBlock(void *superBlockPtr) {
     unsigned int writeByte = fwrite(superBlockPtr, sizeof(SuperBlock), 1, this->imgFilePtr);
 
     if (writeByte != 1) {
+        MoFSErrno = 16;
         return -1;
     }
 

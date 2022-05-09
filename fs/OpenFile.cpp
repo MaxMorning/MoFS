@@ -7,6 +7,7 @@
  */
 #include <ctime>
 
+#include "../include/MoFSErrno.h"
 #include "../utils/Diagnose.h"
 #include "../include/OpenFile.h"
 #include "../include/DirEntry.h"
@@ -16,6 +17,7 @@
 int OpenFile::Read(char *buffer, int size) {
     // 权限检查
     if ((this->f_flag & FileFlags::FREAD) != FileFlags::FREAD) {
+        MoFSErrno = 1;
         Diagnose::PrintError("Read operation denied because of permission.");
         return 0;
     }
@@ -33,6 +35,7 @@ int OpenFile::Read(char *buffer, int size) {
 int OpenFile::Write(char *buffer, int size) {
     // 权限检查
     if ((this->f_flag & FileFlags::FWRITE) != FileFlags::FWRITE) {
+        MoFSErrno = 1;
         Diagnose::PrintError("Write operation denied because of permission.");
         return 0;
     }
@@ -61,6 +64,7 @@ int OpenFile::Open(int flag, MemInode *inode, int uid, int gid) {
     // 检查权限
     this->f_inode = inode;
     if (!this->CheckFlags(flag, uid, gid)) {
+        MoFSErrno = 1;
         Diagnose::PrintError("File permission not granted.");
         return -1;
     }
@@ -114,6 +118,10 @@ bool OpenFile::CheckFlags(int flag, int uid, int gid) {
         if (maskedMode == reverseFlag) {
             permissionChecked = true;
         }
+    }
+
+    if (!permissionChecked) {
+        MoFSErrno = 1;
     }
 
     return permissionChecked;

@@ -9,6 +9,7 @@
 #include <ctime>
 #include <cassert>
 
+#include "../include/MoFSErrno.h"
 #include "../include/device/DeviceManager.h"
 #include "../include/MemInode.h"
 #include "../include/SuperBlock.h"
@@ -42,6 +43,7 @@ int MemInode::MemInodeFactory(int diskInodeIdx, MemInode*& memInodePtr) {
     }
 
     if (searchResult == -1) {
+        MoFSErrno = 8;
         Diagnose::PrintError("No more MemInode entry available.");
         return -1;
     }
@@ -85,6 +87,7 @@ int MemInode::MemInodeNotInit(MemInode*& memInodePtr) {
     }
 
     if (searchResult == -1) {
+        MoFSErrno = 8;
         Diagnose::PrintError("No more MemInode entry available.");
         return -1;
     }

@@ -8,6 +8,7 @@
 
 #include <ctime>
 
+#include "../include/MoFSErrno.h"
 #include "../include/device/DeviceManager.h"
 #include "../include/SuperBlock.h"
 #include "../utils/Diagnose.h"
@@ -120,6 +121,7 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
 
 int SuperBlock::AllocBlock() {
     if (this->s_nfree <= 0) {
+        MoFSErrno = 11;
         return -1;
     }
 
@@ -129,6 +131,7 @@ int SuperBlock::AllocBlock() {
         // 调入后，s_free[0]指向的块被释放，可以作为空闲块返回
         if (this->s_free[0] == 0) {
             // 已经没有空闲块了
+            MoFSErrno = 11;
             return -1;
         }
 
@@ -171,6 +174,7 @@ int SuperBlock::ReleaseBlock(int blockIdx) {
 int SuperBlock::AllocDiskInode() {
     if (this->s_ninode <= 0) {
         // 当前没有可分配的inode
+        MoFSErrno = 15;
         return -1;
     }
 
