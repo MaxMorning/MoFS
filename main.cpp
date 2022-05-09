@@ -13,16 +13,23 @@
 #include "include/device/DeviceManager.h"
 #include "include/User.h"
 #include "utils/Diagnose.h"
+#include "include/Primitive.h"
 
 using namespace std;
 
 
+int uid, gid;
+
 int InitSystem() {
     memset(MemInode::systemMemInodeTable, 0, sizeof(MemInode) * SYSTEM_MEM_INODE_NUM);
+    User::userPtr = new User{uid, gid};
     return 0;
 }
 
 int shutdown() {
+    // 释放userPtr
+    delete User::userPtr;
+
     // 写回SuperBlock
     return DeviceManager::deviceManager.StoreSuperBlock(&SuperBlock::superBlock);
 }

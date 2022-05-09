@@ -16,7 +16,7 @@
 #define BLOCK_SIZE 512
 
 // 默认情况下
-User User::user{0, 0};
+User* User::userPtr = nullptr;
 
 bool NameComp(const char* name1, const char* name2, int size) {
     for (int i = 0; i < size; ++i) {
@@ -366,7 +366,7 @@ int User::Close(int fd) {
 }
 
 int User::Read(int fd, char *buffer, int size) {
-    if (fd >= USER_OPEN_FILE_TABLE_SIZE || this->userOpenFileTable[fd].f_inode == nullptr) {
+    if (fd < 0 || fd >= USER_OPEN_FILE_TABLE_SIZE || this->userOpenFileTable[fd].f_inode == nullptr) {
         Diagnose::PrintError("Bad file descriptor.");
         return -1;
     }
@@ -375,7 +375,7 @@ int User::Read(int fd, char *buffer, int size) {
 }
 
 int User::Write(int fd, char *buffer, int size) {
-    if (fd >= USER_OPEN_FILE_TABLE_SIZE || this->userOpenFileTable[fd].f_inode == nullptr) {
+    if (fd < 0 || fd >= USER_OPEN_FILE_TABLE_SIZE || this->userOpenFileTable[fd].f_inode == nullptr) {
         Diagnose::PrintError("Bad file descriptor.");
         return -1;
     }
@@ -386,7 +386,7 @@ int User::Write(int fd, char *buffer, int size) {
 }
 
 int User::Seek(int fd, int offset, int fromWhere) {
-    if (fd >= USER_OPEN_FILE_TABLE_SIZE || this->userOpenFileTable[fd].f_inode == nullptr) {
+    if (fd < 0 || fd >= USER_OPEN_FILE_TABLE_SIZE || this->userOpenFileTable[fd].f_inode == nullptr) {
         Diagnose::PrintError("Bad file descriptor.");
         return -1;
     }

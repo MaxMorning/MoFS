@@ -100,7 +100,7 @@ public:
     int gid;
     OpenFile userOpenFileTable[USER_OPEN_FILE_TABLE_SIZE]; ///< 用户打开的文件列表，如果表项的f_inode == nullptr表示未被占用
 
-    static User user; ///< 全局user
+    static User* userPtr; ///< 全局user指针，在init函数中被初始化，在shutdown函数中释放
 private:
     /**
      * @brief 获取空闲的表项

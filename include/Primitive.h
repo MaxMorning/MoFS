@@ -1,15 +1,17 @@
 /**
  * @file Primitive.h
- * @brief 原语头文件，理论上从原语层开始，就是用户代码而非内核代码了，可以使用STL / new之类
+ * @brief 原语头文件(// 理论上从原语层开始，就是用户代码而非内核代码了，可以使用STL / new之类)
  * @mainpage Primitive
  * @author 韩孟霖
  * @date 2022/05/09
  * @license GPL v3
- * @note 原语层函数应当适配SUSv3标准
+ * @note 原语层函数应当兼容SUSv3标准
  */
 
 #ifndef MOFS_PRIMITIVE_H
 #define MOFS_PRIMITIVE_H
+
+#include "OpenFile.h"
 
 /**
  * @brief 创建普通文件，并以只读方式打开
@@ -70,11 +72,42 @@ int mofs_lseek(int fd, int offset, int whence);
  */
 int mofs_close(int fd);
 
+/**
+ * @brief 建立硬连接
+ * @param oldpath 硬连接来源路径
+ * @param newpath 硬连接目标地址
+ * @return 0为成功，-1为失败
+ */
+int mofs_link(const char *srcpath, const char *dstpath);
 
-/// 以下为mofs_open函数中oflags可使用的选项
+/**
+ * @brief 取消硬连接，当连接数小于1时会删除文件
+ * @param pathname 路径
+ * @return 0为成功，-1为失败
+ */
+int mofs_unlink(const char *pathname);
 
+// 以下为mofs_open函数中oflags可使用的选项
+// 以下三项必须三选一
+const int O_RDONLY = FileFlags::FREAD;  ///< 0001 只读
+const int O_WRONLY = FileFlags::FWRITE; ///< 0010 只写
+const int O_RDWR = O_RDONLY | O_WRONLY; ///< 0011 读写
 
+// 以下各项可选
+const int O_CREAT = 0x4;                ///< 0100, 如果待打开的文件不存在，则创建
+const int O_APPEND = 0x8;               ///< 1000, 将读写指针设置在结尾
+const int O_DIRECTORY = 0x10;           ///< 0001 0000, 如果打开的文件不是目录文件，则返回-1
 
-/// 以下为mofs_open函数中mode可使用的选项
+// 以下为mofs_open函数中mode可使用的选项，仅在oflags有O_CREAT时有效
+const int S_IRUSR = 0400;           ///< 100 000 000 本用户可读
+const int S_IWUSR = 0200;           ///< 010 000 000 本用户可写
+const int S_IXUSR = 0100;           ///< 001 000 000 本用户可执行
 
+const int S_IRGRP = S_IRUSR >> 3;   ///< 000 100 000 同组用户可读
+const int S_IWGRP = S_IWUSR >> 3;   ///< 000 010 000 同组用户可写
+const int S_IXGRP = S_IXUSR >> 3;   ///< 000 001 000 同组用户可执行
+
+const int S_IROTH = S_IRGRP >> 3;   ///< 其他用户可读
+const int S_IWOTH = S_IWGRP >> 3;   ///< 其他用户可写
+const int S_IXOTH = S_IXGRP >> 3;   ///< 其他用户可执行
 #endif //MOFS_PRIMITIVE_H
