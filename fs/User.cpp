@@ -169,6 +169,10 @@ int User::GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffe
         currentDiskInodeIndex = SuperBlock::superBlock.s_rootInode;
         ++pathStrIdx;
     }
+    else if (path[0] == '.' && path[1] == '/') {
+        pathStrIdx = 2;
+        currentDiskInodeIndex = this->currentWorkDir->i_number;
+    }
     else {
         // 相对路径
         currentDiskInodeIndex = this->currentWorkDir->i_number;
@@ -339,6 +343,8 @@ int User::Create(const char *path, int mode) {
     }
 
     this->userOpenFileTable[emptyIndex].f_inode = memInodePtr;
+    this->userOpenFileTable[emptyIndex].f_flag = FileFlags::FWRITE;
+    this->userOpenFileTable[emptyIndex].f_offset = 0;
 
     // MemInode初始化
 //    memInodePtr->i_flag = INodeFlag::IUPD | INodeFlag::IACC;
@@ -353,6 +359,11 @@ int User::Create(const char *path, int mode) {
     memInodePtr->i_size = 0;
     memset(memInodePtr->i_addr, -1, 10 * sizeof(int));
 
+    // 将inode 写回磁盘
+    int currentTime = time(nullptr);
+    if (-1 == memInodePtr->StoreToDisk(currentTime, currentTime)) {
+        return -1;
+    }
     return emptyIndex;
 }
 
@@ -475,7 +486,15 @@ int User::Link(const char *srcPath, const char *dstPath) {
         Diagnose::PrintError("Cannot insert entry into dir");
         return -1;
     }
-    return 0;
+
+    // 更新inode
+    OpenFile linkOpenFile;
+    if (-1 == OpenFile::OpenFileFactory(linkOpenFile, srcDiskInode, this->uid, this->gid, 0)) {
+        return -1;
+    }
+    linkOpenFile.f_inode->i_nlink++;
+
+    return linkOpenFile.Close();
 }
 
 
@@ -603,6 +622,44 @@ int User::GetInodeStat(int inodeIdx, struct FileStat *stat_buf) {
     stat_buf->st_atime = diskInode.d_atime;
     stat_buf->st_mtime = diskInode.d_mtime;
 
+    return 0;
+}
+
+int User::ChangeDir(const char *new_dir) {
+    // 基于path找到对应inode
+    OpenFile currentDirFile;
+    char nameBuffer[NAME_MAX_LENGTH];
+    int nameBufferIdx;
+
+    if (this->GetDirFile(new_dir, currentDirFile, nameBuffer, nameBufferIdx) == -1) {
+        return -1;
+    }
+
+    // 函数正常结束后，nameBuffer中保存有最后一个文件的名称
+    if (!currentDirFile.IsDirFile()) {
+        MoFSErrno = 6;
+        Diagnose::PrintError("This is not a dir file.");
+        currentDirFile.Close();
+        return -1;
+    }
+
+    int targetInode = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
+    if (targetInode == -1) {
+        MoFSErrno = 2;
+        Diagnose::PrintError("File not exist.");
+        return -1;
+    }
+
+    MemInode* memInodePtr;
+    if (-1 == MemInode::MemInodeFactory(targetInode, memInodePtr)) {
+        return -1;
+    }
+
+    if (-1 == this->currentWorkDir->Close(-1, -1)) {
+        return -1;
+    }
+
+    this->currentWorkDir = memInodePtr;
     return 0;
 }
 

@@ -122,8 +122,8 @@ public:
 
     /**
      * @brief 将inode写回磁盘，不关闭文件
-     * @param lastAccTime 最后访问时间
-     * @param lastModTime 最后修改时间
+     * @param lastAccTime 最后访问时间，-1表示不修改
+     * @param lastModTime 最后修改时间，-1表示不修改
      * @return 0表示成功，-1表示失败
      */
     int StoreToDisk(int lastAccTime, int lastModTime);

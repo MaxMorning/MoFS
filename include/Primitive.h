@@ -1,6 +1,6 @@
 ﻿/**
  * @file Primitive.h
- * @brief 原语头文件(// 理论上从原语层开始，就是用户代码而非内核代码了，可以使用STL / new之类)
+ * @brief 原语头文件
  * @mainpage Primitive
  * @author 韩孟霖
  * @date 2022/05/09

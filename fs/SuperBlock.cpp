@@ -40,7 +40,7 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
     superBlockRef.s_ronly = 0;
     superBlockRef.s_time = time(nullptr);
 
-    DeviceManager::deviceManager.SetOffset(HEADER_SIG_SIZE + superBlockRef.s_isize * BLOCK_SIZE + inodeSegSize);
+    DeviceManager::deviceManager.SetOffset(HEADER_SIG_SIZE + superBlockRef.s_isize * BLOCK_SIZE + sizeof(SuperBlock));
 
     // 设置空闲块
     // 设置直接管辖的空闲块
@@ -136,7 +136,10 @@ int SuperBlock::AllocBlock() {
         }
 
         int blockContent[BLOCK_SIZE / sizeof(int)];
-        DeviceManager::deviceManager.ReadBlock(this->s_free[0], blockContent);
+        if (BLOCK_SIZE != DeviceManager::deviceManager.ReadBlock(this->s_free[0], blockContent)) {
+            MoFSErrno = 16;
+            return -1;
+        }
 
         // 这里的memcpy将同时写s_nfree 和 s_free
         memcpy(&(this->s_nfree), blockContent, 101 * sizeof(int));
@@ -146,6 +149,7 @@ int SuperBlock::AllocBlock() {
     else {
         // 当前superBlock直接管理一块或更多空闲块
         --(this->s_nfree);
+        this->s_free[this->s_nfree] = 0;
         return freeBlock;
     }
 }

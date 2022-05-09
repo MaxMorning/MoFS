@@ -97,6 +97,13 @@ public:
     int Seek(int fd, int offset, int fromWhere);
 
     /**
+     * @brief 切换用户工作目录
+     * @param new_dir 新的工作目录
+     * @return 0表示成功，-1表示失败
+     */
+    int ChangeDir(const char* new_dir);
+
+    /**
      * @brief 获取文件信息
      * @param path 路径
      * @param stat_buf 返回值缓冲区

@@ -564,13 +564,15 @@ int MemInode::ReleaseBlocks() {
 }
 
 int MemInode::Close(int lastAccTime, int lastModTime) {
-    assert(this->i_count == 0);
+    this->i_count--;
 
-    if (-1 == this->StoreToDisk(lastAccTime, lastModTime)) {
-        return -1;
+    if (this->i_count <= 0) {
+        if (-1 == this->StoreToDisk(lastAccTime, lastModTime)) {
+            return -1;
+        }
+
+        this->i_used = 0;
     }
-
-    this->i_used = 0;
     return 0;
 }
 
@@ -580,6 +582,13 @@ int MemInode::StoreToDisk(int lastAccTime, int lastModTime) {
         return 0;
     }
     DiskInode diskInode;
+
+    if (lastAccTime < 0 || lastAccTime < 0) {
+        if (-1 == DiskInode::DiskInodeFactory(this->i_number, diskInode)) {
+            return -1;
+        }
+    }
+
     diskInode.d_mode = this->i_mode;
     diskInode.d_nlink = this->i_nlink;
     diskInode.d_uid = this->i_uid;
@@ -588,8 +597,13 @@ int MemInode::StoreToDisk(int lastAccTime, int lastModTime) {
 
     memcpy(diskInode.d_addr, this->i_addr, 10 * sizeof(int));
 
-    diskInode.d_atime = lastAccTime;
-    diskInode.d_mtime = lastModTime;
+    if (lastAccTime >= 0) {
+        diskInode.d_atime = lastAccTime;
+    }
+
+    if (lastModTime >= 0) {
+        diskInode.d_mtime = lastModTime;
+    }
 
     return DeviceManager::deviceManager.WriteInode(this->i_number, &diskInode);
 }

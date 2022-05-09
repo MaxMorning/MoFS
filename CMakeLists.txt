@@ -16,4 +16,5 @@ add_executable(MoFS
         include/User.h fs/User.cpp
         include/DiskInode.h fs/DiskInode.cpp
         include/Primitive.h fs/Primitive.cpp
-        include/MoFSErrno.h fs/MoFSErrno.cpp)
+        include/MoFSErrno.h fs/MoFSErrno.cpp
+        include/CLI.h CLI/CLI.cpp)

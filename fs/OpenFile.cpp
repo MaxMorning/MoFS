@@ -50,14 +50,8 @@ int OpenFile::Write(char *buffer, int size) {
 }
 
 int OpenFile::Close() {
-    --(this->f_inode->i_count);
-
-    if (this->f_inode->i_count <= 0) {
-        // 将inode写回磁盘中
-        return this->f_inode->Close(this->f_lastAccessTime, this->f_lastModifyTime);
-    }
-
-    return 0;
+    // 关闭文件，但inode不一定写回磁盘。如果有其它文件还在使用，inode不会被释放
+     return this->f_inode->Close(this->f_lastAccessTime, this->f_lastModifyTime);
 }
 
 int OpenFile::Open(int flag, MemInode *inode, int uid, int gid) {
