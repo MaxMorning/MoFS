@@ -27,6 +27,8 @@ public:
      * @param logInfo 日志信息
      */
     static void PrintLog(const std::string& logInfo);
+
+    static void PrintErrno(const std::string& errorInfo);
 };
 
 

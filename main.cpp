@@ -14,6 +14,7 @@
 #include "include/User.h"
 #include "utils/Diagnose.h"
 #include "include/Primitive.h"
+#include "include/MoFSErrno.h"
 
 using namespace std;
 
@@ -23,6 +24,7 @@ int uid, gid;
 int InitSystem() {
     memset(MemInode::systemMemInodeTable, 0, sizeof(MemInode) * SYSTEM_MEM_INODE_NUM);
     User::userPtr = new User{uid, gid};
+    MoFSErrno = 0;
     return 0;
 }
 
@@ -88,43 +90,46 @@ int main(int argc, char* argv[]) {
 #else
 //    SuperBlock::MakeFS(16 * 1024 * 1024, 2048);
     DeviceManager::deviceManager.LoadSuperBlock(&SuperBlock::superBlock);
-    User user{0, 0};
-//    if (-1 == user.Unlink("/hello2")) {
-//        Diagnose::PrintError("Cannot unlink /hello2");
-//    }
-//    else {
-//        Diagnose::PrintLog("/hello2 unlinked.");
-//    }
-//
-//    int fd = user.Create("/hello2", MemInode::IALLOC | MemInode::IFDIR | 0777);
-//
-//    if (fd != -1) {
-//        Diagnose::PrintLog("hello2 dir created");
-//    }
-//    user.Close(fd);
 
-    int fd2 = user.Create("/hello2/2.txt", MemInode::IALLOC | MemInode::IFMT | 0777);
+    if (-1 == mofs_unlink("/hello2")) {
+        Diagnose::PrintErrno("Cannot unlink /hello2");
+    }
+    else {
+        Diagnose::PrintLog("/hello2 unlinked.");
+    }
+
+    int fd = mofs_mkdir("/hello2", 0777);
+
+    if (fd != -1) {
+        Diagnose::PrintLog("hello2 dir created");
+    }
+    else {
+        Diagnose::PrintErrno("Cannot create /hello2");
+    }
+    mofs_close(fd);
+
+    int fd2 = mofs_creat("/hello2/2.txt", 0777);
 
     if (fd2 != -1) {
         Diagnose::PrintLog("/hello2/2.txt created");
     }
 
-    user.Close(fd2);
+    mofs_close(fd2);
 
-    if (-1 == user.Link("/hello2/2.txt", "3.txt")) {
-        Diagnose::PrintError("Cannot link 3.txt");
+    if (-1 == mofs_link("/hello2/2.txt", "3.txt")) {
+        Diagnose::PrintErrno("Cannot link 3.txt");
     }
 
 
-    if (-1 == user.Unlink("/hello2/2.txt")) {
-        Diagnose::PrintError("Cannot unlink /hello2/2.txt");
+    if (-1 == mofs_unlink("/hello2/2.txt")) {
+        Diagnose::PrintErrno("Cannot unlink /hello2/2.txt");
     }
     else {
         Diagnose::PrintLog("/hello2/2.txt unlinked.");
     }
 
 
-    if (-1 == user.Unlink("3.txt")) {
+    if (-1 == mofs_unlink("3.txt")) {
         Diagnose::PrintError("Cannot unlink 3.txt");
     }
     else {

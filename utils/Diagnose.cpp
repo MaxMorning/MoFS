@@ -9,13 +9,20 @@
 #include <iostream>
 
 #include "Diagnose.h"
+#include "../include/MoFSErrno.h"
 
 using namespace std;
 
 void Diagnose::PrintError(const std::string& errorInfo) {
+#ifdef PRINT_ERROR_IN_LOW_LAYERS
     cerr << "[ERROR]\t" << errorInfo << endl;
+#endif
 }
 
 void Diagnose::PrintLog(const std::string& logInfo) {
     cout << "[LOG]\t" << logInfo << endl;
+}
+
+void Diagnose::PrintErrno(const string &errorInfo) {
+    cerr << "[ERROR]\t" << errorInfo << ", errno(" << MoFSErrno << "):" << ErrnoMsg[MoFSErrno] << endl;
 }

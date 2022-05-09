@@ -3,6 +3,8 @@ project(MoFS)
 
 set(CMAKE_CXX_STANDARD 14)
 
+set(CMAKE_CXX_FLAGS "-DPRINT_ERROR_IN_LOW_LAYERS")
+
 add_executable(MoFS
         main.cpp
         include/MemInode.h fs/MemInode.cpp
