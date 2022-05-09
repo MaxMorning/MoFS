@@ -21,16 +21,16 @@ DeviceManager::DeviceManager() {
     this->SetOffset(DEFAULT_OFFSET + HEADER_SIG_SIZE);
 }
 
-void DeviceManager::OpenImage(const std::string &imagePath) {
+void DeviceManager::OpenImage(const char *imagePath) {
     // 尝试打开映象文件
-    this->imgFilePtr = fopen(imagePath.c_str(), "rb+");
+    this->imgFilePtr = fopen(imagePath, "rb+");
     // 如果不存在，创建一个
     if (this->imgFilePtr == nullptr) {
-        this->imgFilePtr = fopen(imagePath.c_str(), "wb+");
+        this->imgFilePtr = fopen(imagePath, "wb+");
 
         if (this->imgFilePtr == nullptr) {
             // 如果还是打不开，那肯定有问题
-            Diagnose::PrintError("Cannot open image : " + imagePath);
+            Diagnose::PrintError("Cannot open image : " + std::string(imagePath));
             return;
         }
     }

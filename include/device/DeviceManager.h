@@ -35,7 +35,7 @@ public:
      * @brief 打开映象文件
      * @param imagePath 映象路径
      */
-    void OpenImage(const std::string& imagePath);
+    void OpenImage(const char *imagePath);
 
     /**
      * @brief 加载SuperBlock

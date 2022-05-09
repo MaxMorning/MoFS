@@ -157,7 +157,7 @@ int InsertEntryInDirFile(char* nameBuffer, int bufferSize, int inodeIdx, OpenFil
     return 0;
 }
 
-int User::GetDirFile(const string& path, OpenFile& currentDirFile, char* nameBuffer, int& nameBufferIdx) {
+int User::GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffer, int& nameBufferIdx) {
     int currentDiskInodeIndex;
     int pathStrIdx = 0;
 
@@ -178,7 +178,7 @@ int User::GetDirFile(const string& path, OpenFile& currentDirFile, char* nameBuf
 
     memset(nameBuffer, 0, NAME_MAX_LENGTH);
     nameBufferIdx = 0;
-    for (; pathStrIdx < path.length(); ++pathStrIdx) {
+    for (; path[pathStrIdx] != '\0'; ++pathStrIdx) {
         if (path[pathStrIdx] == '/') {
             assert(pathStrIdx > 0);
 
@@ -227,7 +227,7 @@ int User::GetDirFile(const string& path, OpenFile& currentDirFile, char* nameBuf
     return 0;
 }
 
-int User::Open(const string& path, int flags) {
+int User::Open(const char *path, int flags) {
     int emptyIndex = this->GetEmptyEntry();
     if (emptyIndex == -1) {
         Diagnose::PrintError("No more empty file descriptor left.");
@@ -268,7 +268,7 @@ int User::Open(const string& path, int flags) {
     return emptyIndex;
 }
 
-int User::Create(const string &path, int mode) {
+int User::Create(const char *path, int mode) {
     int emptyIndex = this->GetEmptyEntry();
     if (emptyIndex == -1) {
         Diagnose::PrintError("No more empty file descriptor left.");
@@ -395,7 +395,7 @@ int User::Seek(int fd, int offset, int fromWhere) {
 }
 
 
-int User::Link(const string &srcPath, const string &dstPath) {
+int User::Link(const char *srcPath, const char *dstPath) {
     // 找到srcPath的inode
     OpenFile currentDirFile;
     char nameBuffer[NAME_MAX_LENGTH];
@@ -455,7 +455,7 @@ int User::Link(const string &srcPath, const string &dstPath) {
 }
 
 
-int User::Unlink(const string &path) {
+int User::Unlink(const char *path) {
     OpenFile currentDirFile;
     char nameBuffer[NAME_MAX_LENGTH];
     int nameBufferIdx;

@@ -15,7 +15,7 @@ int mofs_creat(const char *pathname, int mode) {
     mode &= 0777;
 
     // 创建文件
-    return User::userPtr->Create(string(pathname), MemInode::IALLOC | MemInode::IFMT | mode);
+    return User::userPtr->Create(pathname, MemInode::IALLOC | MemInode::IFMT | mode);
 }
 
 int mofs_mkdir(const char *pathname, int mode) {
@@ -23,7 +23,7 @@ int mofs_mkdir(const char *pathname, int mode) {
     mode &= 0777;
 
     // 创建目录文件
-    int fd = User::userPtr->Create(string(pathname), MemInode::IALLOC | MemInode::IFDIR | mode);
+    int fd = User::userPtr->Create(pathname, MemInode::IALLOC | MemInode::IFDIR | mode);
     if (fd < 0) {
         return -1;
     }

@@ -36,7 +36,7 @@ int shutdown() {
 
 int main(int argc, char* argv[]) {
     // 解析输入参数
-    string imagePath = "1.img";
+    char imagePath[] = "1.img";
 
     // 初始化
     DeviceManager::deviceManager.OpenImage(imagePath);

@@ -35,7 +35,7 @@ public:
      * @param flags 读写标记
      * @return 打开的file descriptor，-1表示出错
      */
-    int Open(const string& path, int flags);
+    int Open(const char *path, int flags);
 
     /**
      * 关闭文件
@@ -50,7 +50,7 @@ public:
      * @param mode 各用户的mode, 包括文件类型（目录/文件）、RWX权限等
      * @return 创建的file descriptor，-1表示出错
      */
-    int Create(const string& path, int mode);
+    int Create(const char *path, int mode);
 
     /**
      * @brief 设置硬链接
@@ -58,14 +58,14 @@ public:
      * @param dstPath 目标文件路径
      * @return 0表示成功，-1表示错误
      */
-    int Link(const string& srcPath, const string& dstPath);
+    int Link(const char *srcPath, const char *dstPath);
 
     /**
      * @brief 删除文件，如果链接数大于1，不会真的删除，而是取消path的链接
      * @param path 目标路径
      * @return 0表示成功，-1表示错误
      */
-    int Unlink(const string& path);
+    int Unlink(const char *path);
 
     /**
      * @brief 读取相应的文件数据
@@ -116,7 +116,7 @@ private:
      * @param nameBufferIdx 目标文件名长度
      * @return 0表示成功，-1表示错误
      */
-    int GetDirFile(const string& path, OpenFile& currentDirFile, char* nameBuffer, int& nameBufferIdx);
+    int GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffer, int& nameBufferIdx);
 };
 
 #endif //MOFS_USER_H
