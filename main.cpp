@@ -25,14 +25,22 @@ int uid, gid;
 
 int InitSystem() {
     memset(MemInode::systemMemInodeTable, 0, sizeof(MemInode) * SYSTEM_MEM_INODE_NUM);
+    memset(User::userTable, 0, sizeof(int*) * MAX_USER_NUM);
     User::userPtr = new User{uid, gid};
+    User::userTable[0] = User::userPtr;
+
     MoFSErrno = 0;
     return 0;
 }
 
 int shutdown() {
     // 释放userPtr
-    delete User::userPtr;
+    for (User* & userPtr : User::userTable) {
+        if (userPtr != nullptr) {
+            delete userPtr;
+        }
+    }
+
 
     // 写回SuperBlock
     return DeviceManager::deviceManager.StoreSuperBlock(&SuperBlock::superBlock);

@@ -17,6 +17,7 @@
 
 // 默认情况下
 User* User::userPtr = nullptr;
+User* User::userTable[MAX_USER_NUM];
 
 bool NameComp(const char* name1, const char* name2, int size) {
     for (int i = 0; i < size; ++i) {
@@ -388,6 +389,13 @@ int User::Close(int fd) {
         MoFSErrno = 3;
         return -1;
     }
+
+    if (fd == this->currentWorkDir) {
+        // 不能close工作目录的fd
+        MoFSErrno = 17;
+        return -1;
+    }
+
     if (this->userOpenFileTable[fd].Close(true) == -1) {
         return -1;
     }
@@ -651,5 +659,40 @@ int User::ChangeDir(const char *new_dir) {
 
     this->currentWorkDir = workDirFD;
     return 0;
+}
+
+User::~User() {
+    // 关闭所有打开的文件
+    for (int i = 0; i < USER_OPEN_FILE_TABLE_SIZE; ++i) {
+        if (i != this->currentWorkDir && this->userOpenFileTable[i].f_inode != nullptr) {
+            // 这里不管关闭是否成功了，失败了也没法处理
+            this->Close(i);
+        }
+    }
+
+    // 关闭工作目录
+    this->userOpenFileTable[this->currentWorkDir].Close(false);
+}
+
+User * User::ChangeUser(int uid, int gid) {
+    // 在userTable中找
+    for (User* ptr : User::userTable) {
+        if (ptr != nullptr) {
+            if (ptr->uid == uid && ptr->gid == gid) {
+                return ptr;
+            }
+        }
+    }
+
+    // 没找到
+    for (User* & ptr : User::userTable) {
+        if (ptr == nullptr) {
+            ptr = new User{uid, gid};
+            return ptr;
+        }
+    }
+
+    MoFSErrno = 18;
+    return nullptr;
 }
 

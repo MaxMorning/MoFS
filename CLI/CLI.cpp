@@ -49,10 +49,12 @@ int process_command(const string &command, stringstream &input_stream,
                     const unordered_map<string, int> &command_enum_mapping);
 
 string currentWorkDir;
+string cli_header;
+
 
 void infinite_loop(istream &input_stream, int loop_time) {
     // 初始化工作
-    string cli_header = "[User(" + to_string(User::userPtr->uid) + ", " + to_string(User::userPtr->gid) + ") ";
+    cli_header = "[User(" + to_string(User::userPtr->uid) + ", " + to_string(User::userPtr->gid) + ") ";
     currentWorkDir = "/";
 
     const unordered_map<string, int> command_enum_mapping{
@@ -141,7 +143,7 @@ int process_command(const string &command, stringstream &input_stream,
 
             delete User::userPtr;
 
-            /// @todo 这里没有适配uid和gid
+            // 默认用户为0, 0
             User::userPtr = new User{0, 0};
 
             cout << "Make file system success.\n" << endl;
@@ -245,7 +247,7 @@ int process_command(const string &command, stringstream &input_stream,
 
             if (mofs_close(fd) == -1) {
                 Diagnose::PrintErrno("Cannot close file");
-                return -1;
+                return 0;
             }
         }
         break;
@@ -438,8 +440,21 @@ int process_command(const string &command, stringstream &input_stream,
         break;
 
         case CHGUSR_MAP_VALUE: {
-            Diagnose::PrintErrno("CHGUSR not supported");
-            return 0;
+            int uid = -1, gid = -1;
+            input_stream >> uid >> gid;
+            if (uid == -1 || gid == -1) {
+                Diagnose::PrintError("Need more args.");
+                return 0;
+            }
+
+            User* newUser = User::ChangeUser(uid, gid);
+            if (newUser == nullptr) {
+                Diagnose::PrintErrno("Cannot change user");
+                return 0;
+            }
+
+            User::userPtr = newUser;
+            cli_header = "[User(" + to_string(User::userPtr->uid) + ", " + to_string(User::userPtr->gid) + ") ";
         }
         break;
 

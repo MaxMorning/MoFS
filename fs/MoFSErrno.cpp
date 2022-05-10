@@ -29,6 +29,6 @@ char ErrnoMsg[MAX_ERRNO][MAX_MSG_LENGTH] = {
         "No more inode available",
         "Block device error",
         "File is not closed",
-        "",
+        "Reach max user limit",
         "Unknown error"
 };

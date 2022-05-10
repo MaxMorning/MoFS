@@ -17,6 +17,7 @@
 #include "DirEntry.h"
 
 #define USER_OPEN_FILE_TABLE_SIZE 256
+#define MAX_USER_NUM 64
 
 using namespace std;
 
@@ -29,6 +30,11 @@ public:
      * @param gid group id
      */
     User(int uid, int gid);
+
+    /**
+     * 析构函数
+     */
+    ~User();
 
     /**
      * 打开文件，也可打开目录文件
@@ -125,6 +131,15 @@ public:
     OpenFile userOpenFileTable[USER_OPEN_FILE_TABLE_SIZE]; ///< 用户打开的文件列表，如果表项的f_inode == nullptr表示未被占用
 
     static User* userPtr; ///< 全局user指针，在init函数中被初始化，在shutdown函数中释放
+    static User* userTable[MAX_USER_NUM]; ///< 保存所有user指针的数组，在init函数中被初始化，在shutdown函数中释放
+
+    /**
+     * @brief 切换用户
+     * @param uid uid
+     * @param gid gid
+     * @return 返回取得的user，nullptr为失败
+     */
+    static User * ChangeUser(int uid, int gid);
 private:
     /**
      * @brief 获取空闲的表项
