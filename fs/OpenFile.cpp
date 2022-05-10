@@ -26,7 +26,6 @@ int OpenFile::Read(char *buffer, int size) {
 
     if (returnValue >= 0) {
         this->f_offset += returnValue;
-        this->f_lastModifyTime = time(nullptr);
     }
 
     return returnValue;
@@ -49,9 +48,9 @@ int OpenFile::Write(char *buffer, int size) {
     return returnValue;
 }
 
-int OpenFile::Close() {
+int OpenFile::Close(bool updateTime) {
     // 关闭文件，但inode不一定写回磁盘。如果有其它文件还在使用，inode不会被释放
-     return this->f_inode->Close(this->f_lastAccessTime, this->f_lastModifyTime);
+     return this->f_inode->Close(updateTime);
 }
 
 int OpenFile::Open(int flag, MemInode *inode, int uid, int gid) {
@@ -60,17 +59,15 @@ int OpenFile::Open(int flag, MemInode *inode, int uid, int gid) {
     if (!this->CheckFlags(flag, uid, gid)) {
         MoFSErrno = 1;
         Diagnose::PrintError("File permission not granted.");
+        inode->Close(false);
         return -1;
     }
 
     // 权限检查通过
     this->f_flag = flag;
-    inode->i_count++;
 
     this->f_count = 1;
     this->f_offset = 0;
-
-    this->f_lastAccessTime = time(nullptr);
 
     return 0;
 }

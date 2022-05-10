@@ -58,9 +58,10 @@ public:
 
     /**
      * @brief 关闭文件，但不一定释放inode
+     * @param updateTime 是否更新时间
      * @return 0表示成功，-1表示失败
      */
-    int Close();
+    int Close(bool updateTime);
 
     /**
      * @brief 打开并检查权限
@@ -107,8 +108,5 @@ public:
     int		        f_count;		///< 当前引用该文件控制块的进程数量
     MemInode*	    f_inode;		///< 指向打开文件的内存Inode指针
     int		        f_offset;		///< 文件读写位置指针
-
-    int        f_lastAccessTime;    ///< 最后访问时间
-    int        f_lastModifyTime;    ///< 最后修改时间
 };
 #endif //MOFS_OPENFILE_H

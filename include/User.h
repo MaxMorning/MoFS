@@ -119,7 +119,7 @@ public:
      */
     static int GetInodeStat(int inodeIdx, struct FileStat* stat_buf);
 
-    MemInode* currentWorkDir;
+    int currentWorkDir; ///< 当前的工作目录的fd，通常为 0
     int uid;
     int gid;
     OpenFile userOpenFileTable[USER_OPEN_FILE_TABLE_SIZE]; ///< 用户打开的文件列表，如果表项的f_inode == nullptr表示未被占用

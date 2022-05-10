@@ -24,6 +24,9 @@ bool NameComp(const char* name1, const char* name2, int size) {
             return false;
         }
     }
+    if (name1[size] != '\0' || name2[size] != '\0') {
+        return false;
+    }
     return true;
 }
 /**
@@ -86,7 +89,7 @@ int RemoveEntryInDirFile(char* nameBuffer, int bufferSize, OpenFile& dirFile) {
                 dirFile.Write((char*)entries, readByteCnt);
 
                 // 将更新后的inode写回磁盘
-                if (-1 == dirFile.f_inode->StoreToDisk(dirFile.f_lastAccessTime, time(nullptr))) {
+                if (-1 == dirFile.f_inode->StoreToDisk(dirFile.f_inode->i_lastAccessTime, time(nullptr))) {
                     return -1;
                 }
 
@@ -120,6 +123,7 @@ int InsertEntryInDirFile(char* nameBuffer, int bufferSize, int inodeIdx, OpenFil
         for (int i = 0; i < readByteCnt / sizeof(DirEntry); ++i) {
             if (entries[i].m_ino < 0) {
                 entries[i].m_ino = inodeIdx;
+                memset(entries[i].m_name, 0, NAME_MAX_LENGTH);
                 memcpy(entries[i].m_name, nameBuffer, bufferSize);
 
                 // 写回
@@ -131,7 +135,7 @@ int InsertEntryInDirFile(char* nameBuffer, int bufferSize, int inodeIdx, OpenFil
                 }
 
                 // 将更新后的inode写回磁盘
-                if (-1 == dirFile.f_inode->StoreToDisk(dirFile.f_lastAccessTime, time(nullptr))) {
+                if (-1 == dirFile.f_inode->StoreToDisk(dirFile.f_inode->i_lastAccessTime, time(nullptr))) {
                     return -1;
                 }
 
@@ -143,6 +147,7 @@ int InsertEntryInDirFile(char* nameBuffer, int bufferSize, int inodeIdx, OpenFil
     // 没找到空闲的，在尾端插入
     DirEntry newFileEntry{};
     newFileEntry.m_ino = inodeIdx;
+    memset(newFileEntry.m_name, 0, NAME_MAX_LENGTH);
     memcpy(newFileEntry.m_name, nameBuffer, NAME_MAX_LENGTH);
 
     if (-1 == dirFile.Seek(0, SEEK_END)) {
@@ -153,7 +158,7 @@ int InsertEntryInDirFile(char* nameBuffer, int bufferSize, int inodeIdx, OpenFil
     }
 
     // 将更新后的inode写回磁盘
-    if (-1 == dirFile.f_inode->StoreToDisk(dirFile.f_lastAccessTime, time(nullptr))) {
+    if (-1 == dirFile.f_inode->StoreToDisk(dirFile.f_inode->i_lastAccessTime, time(nullptr))) {
         return -1;
     }
 
@@ -171,11 +176,11 @@ int User::GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffe
     }
     else if (path[0] == '.' && path[1] == '/') {
         pathStrIdx = 2;
-        currentDiskInodeIndex = this->currentWorkDir->i_number;
+        currentDiskInodeIndex = this->userOpenFileTable[this->currentWorkDir].f_inode->i_number;
     }
     else {
         // 相对路径
-        currentDiskInodeIndex = this->currentWorkDir->i_number;
+        currentDiskInodeIndex = this->userOpenFileTable[this->currentWorkDir].f_inode->i_number;
     }
 
     if (-1 == OpenFile::OpenFileFactory(currentDirFile, currentDiskInodeIndex, this->uid, this->gid, FileFlags::FREAD)) {
@@ -203,7 +208,7 @@ int User::GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffe
                         return -1;
                     }
                     else {
-                        currentDirFile.Close();
+                        currentDirFile.Close(false);
                         if (-1 == OpenFile::OpenFileFactory(currentDirFile, currentDiskInodeIndex, this->uid, this->gid, FileFlags::FREAD)) {
                             return -1;
                         }
@@ -215,7 +220,7 @@ int User::GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffe
                 else {
                     MoFSErrno = 6;
                     Diagnose::PrintError("this is not a dir file.");
-                    currentDirFile.Close();
+                    currentDirFile.Close(false);
                     return -1;
                 }
             }
@@ -263,7 +268,7 @@ int User::Open(const char *path, int flags) {
             return -1;
         }
         else {
-            currentDirFile.Close();
+            currentDirFile.Close(false);
             if (-1 == OpenFile::OpenFileFactory(currentDirFile, currentDiskInodeIndex, this->uid, this->gid, flags)) {
                 return -1;
             }
@@ -272,7 +277,7 @@ int User::Open(const char *path, int flags) {
     else {
         MoFSErrno = 6;
         Diagnose::PrintError("Parent of opening file is not a dir file.");
-        currentDirFile.Close();
+        currentDirFile.Close(false);
         return -1;
     }
 
@@ -301,7 +306,7 @@ int User::Create(const char *path, int mode) {
     if (!currentDirFile.IsDirFile()) {
         MoFSErrno = 6;
         Diagnose::PrintError("Parent of creating file is not a dir file.");
-        currentDirFile.Close();
+        currentDirFile.Close(false);
         return -1;
     }
 
@@ -383,7 +388,7 @@ int User::Close(int fd) {
         MoFSErrno = 3;
         return -1;
     }
-    if (this->userOpenFileTable[fd].Close() == -1) {
+    if (this->userOpenFileTable[fd].Close(true) == -1) {
         return -1;
     }
 
@@ -438,7 +443,7 @@ int User::Link(const char *srcPath, const char *dstPath) {
     if (!currentDirFile.IsDirFile()) {
         MoFSErrno = 6;
         Diagnose::PrintError("This is not a dir file.");
-        currentDirFile.Close();
+        currentDirFile.Close(false);
         return -1;
     }
 
@@ -460,7 +465,7 @@ int User::Link(const char *srcPath, const char *dstPath) {
     if (!currentDirFile.IsDirFile()) {
         MoFSErrno = 6;
         Diagnose::PrintError("Parent of linking file is not a dir file.");
-        currentDirFile.Close();
+        currentDirFile.Close(false);
         return -1;
     }
 
@@ -494,7 +499,7 @@ int User::Link(const char *srcPath, const char *dstPath) {
     }
     linkOpenFile.f_inode->i_nlink++;
 
-    return linkOpenFile.Close();
+    return linkOpenFile.Close(true);
 }
 
 
@@ -511,7 +516,7 @@ int User::Unlink(const char *path) {
     if (!currentDirFile.IsDirFile()) {
         MoFSErrno = 6;
         Diagnose::PrintError("Parent of unlinking file is not a dir file.");
-        currentDirFile.Close();
+        currentDirFile.Close(false);
         return -1;
     }
 
@@ -533,6 +538,13 @@ int User::Unlink(const char *path) {
     // 处理对应的DiskInode，应该操作OpenFile而非直接操作DiskInode
     OpenFile unlinkedOpenFile;
     if (-1 == OpenFile::OpenFileFactory(unlinkedOpenFile, diskInode, this->uid, this->gid, FileFlags::FREAD | FileFlags::FWRITE)) {
+        return -1;
+    }
+
+    if (unlinkedOpenFile.f_inode->i_count > 1) {
+        // 当前还有其它OpenFile打开这个文件，不让删，需要报错
+        MoFSErrno = 17;
+        unlinkedOpenFile.Close(false);
         return -1;
     }
 
@@ -567,7 +579,7 @@ int User::Unlink(const char *path) {
         return -1;
     }
 
-    return unlinkedOpenFile.Close();
+    return unlinkedOpenFile.Close(true);
 }
 
 User::User(int uid, int gid) {
@@ -575,7 +587,7 @@ User::User(int uid, int gid) {
     this->gid = gid;
     memset(this->userOpenFileTable, 0, USER_OPEN_FILE_TABLE_SIZE * sizeof(OpenFile));
 
-    MemInode::MemInodeFactory(SuperBlock::superBlock.s_rootInode, this->currentWorkDir);
+    this->currentWorkDir = this->Open("/", FileFlags::FREAD | FileFlags::FWRITE);
 }
 
 int User::GetStat(const char *path, struct FileStat *stat_buf) {
@@ -592,7 +604,7 @@ int User::GetStat(const char *path, struct FileStat *stat_buf) {
     if (!currentDirFile.IsDirFile()) {
         MoFSErrno = 6;
         Diagnose::PrintError("This is not a dir file.");
-        currentDirFile.Close();
+        currentDirFile.Close(false);
         return -1;
     }
 
@@ -607,59 +619,37 @@ int User::GetStat(const char *path, struct FileStat *stat_buf) {
 }
 
 int User::GetInodeStat(int inodeIdx, struct FileStat *stat_buf) {
-    // 这里直接使用DiskInode。虽然有越级之嫌，但不需要修改mtime和atime。
-    DiskInode diskInode;
-    if (-1 == DiskInode::DiskInodeFactory(inodeIdx, diskInode)) {
+    MemInode* memInodePtr;
+    if (-1 == MemInode::MemInodeFactory(inodeIdx, memInodePtr)) {
         return -1;
     }
 
     stat_buf->st_ino = inodeIdx;
-    stat_buf->st_mode = diskInode.d_mode;
-    stat_buf->st_nlink = diskInode.d_nlink;
-    stat_buf->st_uid = diskInode.d_uid;
-    stat_buf->st_gid = diskInode.d_gid;
-    stat_buf->st_size = diskInode.d_size;
-    stat_buf->st_atime = diskInode.d_atime;
-    stat_buf->st_mtime = diskInode.d_mtime;
+    stat_buf->st_mode = memInodePtr->i_mode;
+    stat_buf->st_nlink = memInodePtr->i_nlink;
+    stat_buf->st_uid = memInodePtr->i_uid;
+    stat_buf->st_gid = memInodePtr->i_gid;
+    stat_buf->st_size = memInodePtr->i_size;
+    stat_buf->st_atime = memInodePtr->i_lastAccessTime;
+    stat_buf->st_mtime = memInodePtr->i_lastModifyTime;
 
+    memInodePtr->Close(false);
     return 0;
 }
 
 int User::ChangeDir(const char *new_dir) {
-    // 基于path找到对应inode
-    OpenFile currentDirFile;
-    char nameBuffer[NAME_MAX_LENGTH];
-    int nameBufferIdx;
-
-    if (this->GetDirFile(new_dir, currentDirFile, nameBuffer, nameBufferIdx) == -1) {
+    int workDirFD = this->Open(new_dir, FileFlags::FWRITE | FileFlags::FREAD);
+    if (-1 == workDirFD) {
         return -1;
     }
 
-    // 函数正常结束后，nameBuffer中保存有最后一个文件的名称
-    if (!currentDirFile.IsDirFile()) {
-        MoFSErrno = 6;
-        Diagnose::PrintError("This is not a dir file.");
-        currentDirFile.Close();
+    // 这里不使用User::Close来关闭原先的工作目录，是因为不希望将访问时间写回工作目录
+    if (-1 == this->userOpenFileTable[this->currentWorkDir].Close(false)) {
         return -1;
     }
+    this->userOpenFileTable[this->currentWorkDir].f_inode = nullptr; // 释放fd
 
-    int targetInode = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
-    if (targetInode == -1) {
-        MoFSErrno = 2;
-        Diagnose::PrintError("File not exist.");
-        return -1;
-    }
-
-    MemInode* memInodePtr;
-    if (-1 == MemInode::MemInodeFactory(targetInode, memInodePtr)) {
-        return -1;
-    }
-
-    if (-1 == this->currentWorkDir->Close(-1, -1)) {
-        return -1;
-    }
-
-    this->currentWorkDir = memInodePtr;
+    this->currentWorkDir = workDirFD;
     return 0;
 }
 

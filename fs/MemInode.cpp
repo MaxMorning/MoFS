@@ -29,6 +29,7 @@ int MemInode::MemInodeFactory(int diskInodeIdx, MemInode*& memInodePtr) {
 
     if (searchResult != -1) {
         memInodePtr = &(MemInode::systemMemInodeTable[searchResult]);
+        memInodePtr->i_count++;
         return 0;
     }
 
@@ -58,7 +59,7 @@ int MemInode::MemInodeFactory(int diskInodeIdx, MemInode*& memInodePtr) {
 //    memInode.i_flag = 0;
     memInode.i_mode = diskInode.d_mode;
 
-    memInode.i_count = 0;
+    memInode.i_count = 1;
     memInode.i_nlink = diskInode.d_nlink;
 
     memInode.i_dev = 0; // 默认设置设备号为0
@@ -69,6 +70,9 @@ int MemInode::MemInodeFactory(int diskInodeIdx, MemInode*& memInodePtr) {
 
     memInode.i_size = diskInode.d_size;
     memcpy(memInode.i_addr, diskInode.d_addr, 10 * sizeof(int));
+
+    memInode.i_lastAccessTime = diskInode.d_atime;
+    memInode.i_lastModifyTime = diskInode.d_mtime;
 
     memInode.i_used = 1;
 
@@ -203,6 +207,8 @@ int MemInode::Read(int offset, char *buffer, int size) {
         currentBufferOffset += expectedByteCnt;
     }
 
+    this->i_lastAccessTime = time(nullptr);
+
     return currentBufferOffset;
 }
 
@@ -292,6 +298,7 @@ int MemInode::Write(int offset, char *buffer, int size) {
         currentBufferOffset += expectedByteCnt;
     }
 
+    this->i_lastModifyTime = time(nullptr);
 
     return currentBufferOffset;
 }
@@ -563,11 +570,11 @@ int MemInode::ReleaseBlocks() {
     return 0;
 }
 
-int MemInode::Close(int lastAccTime, int lastModTime) {
+int MemInode::Close(bool updateTime) {
     this->i_count--;
 
     if (this->i_count <= 0) {
-        if (-1 == this->StoreToDisk(lastAccTime, lastModTime)) {
+        if (-1 == this->StoreToDisk((updateTime ? this->i_lastAccessTime : -1), (updateTime ? this->i_lastModifyTime : -1))) {
             return -1;
         }
 
@@ -598,10 +605,12 @@ int MemInode::StoreToDisk(int lastAccTime, int lastModTime) {
     memcpy(diskInode.d_addr, this->i_addr, 10 * sizeof(int));
 
     if (lastAccTime >= 0) {
+        this->i_lastAccessTime = lastAccTime;
         diskInode.d_atime = lastAccTime;
     }
 
     if (lastModTime >= 0) {
+        this->i_lastModifyTime = lastModTime;
         diskInode.d_mtime = lastModTime;
     }
 

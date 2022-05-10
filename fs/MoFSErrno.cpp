@@ -28,7 +28,7 @@ char ErrnoMsg[MAX_ERRNO][MAX_MSG_LENGTH] = {
         "Directory not empty",
         "No more inode available",
         "Block device error",
-        "",
+        "File is not closed",
         "",
         "Unknown error"
 };

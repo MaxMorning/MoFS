@@ -114,11 +114,10 @@ public:
 
     /**
      * @brief 关闭inode，写回磁盘，需要保证没有OpenFile指向this
-     * @param lastAccTime 最后访问时间
-     * @param lastModTime 最后修改时间
+     * @param updateTime 是否需要更新时间
      * @return 0表示成功，-1表示失败
      */
-    int Close(int lastAccTime, int lastModTime);
+    int Close(bool updateTime);
 
     /**
      * @brief 将inode写回磁盘，不关闭文件
@@ -148,6 +147,9 @@ public:
 
     int		i_used;		    ///< 指示该inode是否有效。在systemMemInodeTable中，若为1则表示有效，0表示空闲。
                             ///< 在UNIX V6++中，这里存放最近一次读取文件的逻辑块号，用于判断是否需要预读。
+
+    int     i_lastAccessTime;    ///< 最后访问时间
+    int     i_lastModifyTime;    ///< 最后修改时间
 
     static MemInode systemMemInodeTable[SYSTEM_MEM_INODE_NUM]; ///< 系统全局inode表
 
