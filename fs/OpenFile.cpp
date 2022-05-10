@@ -172,7 +172,7 @@ int OpenFile::Seek(int offset, int fromWhere) {
         default:
             return -1;
     }
-    return 0;
+    return this->f_offset;
 }
 
 int OpenFile::OpenFileFactory(OpenFile &openFile, int diskInodeIdx, int uid, int gid, int flags) {

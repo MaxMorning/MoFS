@@ -45,11 +45,15 @@ using namespace std;
  * @param command_enum_mapping 映射
  * @return 返回-1则需要退出循环
  */
-int process_command(istream& input_stream, const unordered_map<string, int>& command_enum_mapping);
+int process_command(const string &command, stringstream &input_stream,
+                    const unordered_map<string, int> &command_enum_mapping);
+
+string currentWorkDir;
 
 void infinite_loop(istream &input_stream, int loop_time) {
     // 初始化工作
-    string cli_header = "User(" + to_string(User::userPtr->uid) + ", " + to_string(User::userPtr->gid) + ")>";
+    string cli_header = "[User(" + to_string(User::userPtr->uid) + ", " + to_string(User::userPtr->gid) + ") ";
+    currentWorkDir = "/";
 
     const unordered_map<string, int> command_enum_mapping{
             {"mkfs", MKFS_MAP_VALUE},
@@ -76,11 +80,12 @@ void infinite_loop(istream &input_stream, int loop_time) {
 
     if (loop_time < 0) {
         while (true) {
-            cout << cli_header;
+            cout << cli_header << currentWorkDir << "]$ ";
             string line;
             getline(cin, line);
             stringstream string_stream{line};
-            if (-1 == process_command(string_stream, command_enum_mapping)) {
+            string_stream >> command;
+            if (-1 == process_command(command, string_stream, command_enum_mapping)) {
                 break;
             }
         }
@@ -88,7 +93,11 @@ void infinite_loop(istream &input_stream, int loop_time) {
     else {
         for (int i = 0; i < loop_time; ++i) {
             cout << cli_header;
-            if (-1 == process_command(input_stream, command_enum_mapping)) {
+            string line;
+            getline(cin, line);
+            stringstream string_stream{line};
+            string_stream >> command;
+            if (-1 == process_command(command, string_stream, command_enum_mapping)) {
                 break;
             }
         }
@@ -99,11 +108,8 @@ void print_list(const char* pathname);
 
 #define TRANS_BUFFER_SIZE 2048
 
-int process_command(istream& input_stream, const unordered_map<string, int>& command_enum_mapping) {
-    string command;
-
-    input_stream >> command;
-
+int process_command(const string &command, stringstream &input_stream,
+                    const unordered_map<string, int> &command_enum_mapping) {
     auto iter = command_enum_mapping.find(command);
     if (iter == command_enum_mapping.end()) {
         cout << "Unrecognized command." << endl;
@@ -215,6 +221,10 @@ int process_command(istream& input_stream, const unordered_map<string, int>& com
 
                 fd = mofs_open(pathname.c_str(), O_RDWR | O_APPEND | O_CREAT, mode);
             }
+            else {
+                Diagnose::PrintErrno("Cannot recognize flags : " + flags);
+                return 0;
+            }
 
             if (fd < 0) {
                 Diagnose::PrintErrno("Cannot open file with " + flags);
@@ -272,7 +282,7 @@ int process_command(istream& input_stream, const unordered_map<string, int>& com
             }
 
             string write_data;
-            input_stream >> write_data;
+            getline(input_stream, write_data);
 
             int write_byte_cnt = mofs_write(fd, (void *) write_data.c_str(), count);
 
@@ -444,6 +454,21 @@ int process_command(istream& input_stream, const unordered_map<string, int>& com
             if (-1 == User::userPtr->ChangeDir(pathname.c_str())) {
                 Diagnose::PrintErrno("Cannot change dir");
                 return 0;
+            }
+
+            // 找到最小子目录
+            int last_pos = -1;
+            for (int i = pathname.length() - 1; i >= 0; --i) {
+                if (pathname[i] == '/') {
+                    last_pos = i;
+                    break;
+                }
+            }
+            if (last_pos < 0) {
+                currentWorkDir = pathname;
+            }
+            else {
+                currentWorkDir = pathname.substr(last_pos + 1, pathname.length() - last_pos);
             }
         }
         break;
