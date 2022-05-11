@@ -191,19 +191,18 @@ int process_command(const string &command, stringstream &input_stream,
         case FOPEN_MAP_VALUE: {
             string pathname, flags;
             input_stream >> pathname >> flags;
+            int mode = 0777;
 
             int fd = -1;
             if (flags == "r") {
                 fd = mofs_open(pathname.c_str(), O_RDONLY, 0);
             }
             else if (flags == "w") {
-                int mode;
                 input_stream >> oct >> mode >> dec;
 
                 fd = mofs_open(pathname.c_str(), O_WRONLY | O_CREAT, mode);
             }
             else if (flags == "a") {
-                int mode;
                 input_stream >> oct >> mode >> dec;
 
                 fd = mofs_open(pathname.c_str(), O_WRONLY | O_APPEND | O_CREAT, mode);
@@ -212,13 +211,11 @@ int process_command(const string &command, stringstream &input_stream,
                 fd = mofs_open(pathname.c_str(), O_RDWR, 0);
             }
             else if (flags == "w+") {
-                int mode;
                 input_stream >> oct >> mode >> dec;
 
                 fd = mofs_open(pathname.c_str(), O_RDWR | O_CREAT, mode);
             }
             else if (flags == "a+") {
-                int mode;
                 input_stream >> oct >> mode >> dec;
 
                 fd = mofs_open(pathname.c_str(), O_RDWR | O_APPEND | O_CREAT, mode);

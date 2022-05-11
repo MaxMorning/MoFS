@@ -250,8 +250,9 @@ int MemInode::Write(int offset, char *buffer, int size) {
         if (writeByteCnt != BLOCK_SIZE) {
             return -1;
         }
-        currentBufferOffset += writeByteCnt;
-        currentFileOffset += writeByteCnt;
+        int expectedByteCnt = min(size, BLOCK_SIZE);
+        currentBufferOffset += expectedByteCnt;
+        currentFileOffset += expectedByteCnt;
     }
     else {
         // 需要先加载，修改后再写入

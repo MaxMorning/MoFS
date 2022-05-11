@@ -67,7 +67,7 @@ public:
     static DeviceManager deviceManager; ///< DeviceManager单例
 
     /**
-     * @brief 根据提供的blockNo，从磁盘或内存缓存中读取数据
+     * @brief 根据提供的blockNo，从内存缓存中读取数据
      * @param blockNo 待读取的块号
      * @param buffer 待写入数据的缓冲区，调用者需要保证其有足够的空间
      * @return 返回实际读取的字节数
@@ -75,12 +75,26 @@ public:
     unsigned int ReadBlock(int blockNo, void *buffer);
 
     /**
-     * @brief 根据提供的blockNo，向磁盘或内存缓存中写入数据
+     * @brief 根据提供的blockNo，向内存缓存中写入数据
      * @param blockNo 待写入的块号
      * @param buffer 待写入块中的缓冲区数据
      * @return 返回实际写入的字节数
      */
     unsigned int WriteBlock(int blockNo, void *buffer);
+
+    /**
+     * @brief 根据提供的bufferIdx，向磁盘中写入数据
+     * @param bufferIdx 待写入的缓存块号
+     * @return 返回实际写入的字节数
+     */
+    unsigned int WriteBlockToFile(int bufferIdx);
+
+    /**
+     * @brief 根据提供的bufferIdx，向磁盘中写入DiskInode
+     * @param bufferIdx 待写入的缓存inode号
+     * @return 0表示成功，-1表示出错
+     */
+    int WriteInodeToFile(int bufferIdx);
 
     /**
      * @brief 读取指定编号的diskInode

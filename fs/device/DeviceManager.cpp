@@ -43,6 +43,18 @@ void DeviceManager::OpenImage(const char *imagePath) {
 }
 
 DeviceManager::~DeviceManager() {
+    // 将所有缓存的脏块写回文件
+    int currentPtr = blockBufferManager.headPtr;
+    while (currentPtr >= 0) {
+        if (this->blockDirty[currentPtr]) {
+            // 脏块
+            this->WriteBlockToFile(currentPtr);
+        }
+
+        currentPtr = blockBufferManager.nextLinkList[currentPtr];
+    }
+
+
     if (this->imgFilePtr != nullptr) {
         fclose(this->imgFilePtr);
     }
@@ -72,9 +84,10 @@ unsigned int DeviceManager::ReadBlock(int blockNo, void *buffer) {
         int newBufferIdx = blockBufferManager.AllocNewBuffer(blockNo, isRelease);
         if (isRelease && blockDirty[newBufferIdx]) {
             // newBufferIdx指向的块的内容需要被写回磁盘中
-            fwrite(blockBuffer[newBufferIdx], 1, BLOCK_SIZE, this->imgFilePtr);
+            this->WriteBlockToFile(newBufferIdx);
         }
         memcpy(blockBuffer[newBufferIdx], buffer, BLOCK_SIZE);
+        this->blockDirty[newBufferIdx] = false;
     }
     return readByteCnt;
 }
@@ -95,7 +108,7 @@ unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer) {
     if (isReleased && blockDirty[newBlockIdx]) {
         // 有块因为新的缓存块需求而被释放，且该块脏
         // 需要写回磁盘
-        fwrite(blockBuffer[newBlockIdx], 1, BLOCK_SIZE, this->imgFilePtr);
+        this->WriteBlockToFile(newBlockIdx);
     }
     memcpy(blockBuffer[newBlockIdx], buffer, BLOCK_SIZE);
     blockDirty[newBlockIdx] = true;
@@ -155,6 +168,28 @@ int DeviceManager::StoreSuperBlock(void *superBlockPtr) {
 
     SuperBlock* ptr = (SuperBlock*) superBlockPtr;
     this->blockContentOffset = ptr->s_isize * BLOCK_SIZE + sizeof(SuperBlock) + HEADER_SIG_SIZE;
+
+    return 0;
+}
+
+unsigned int DeviceManager::WriteBlockToFile(int bufferIdx) {
+    int dstOffset = this->blockBufferManager.numberLinkList[bufferIdx] * BLOCK_SIZE + this->blockContentOffset;
+    fseek(this->imgFilePtr, dstOffset, SEEK_SET);
+
+    return fwrite(this->blockBuffer[bufferIdx], BLOCK_SIZE, 1, this->imgFilePtr);
+}
+
+int DeviceManager::WriteInodeToFile(int bufferIdx) {
+    int inodeNo = this->inodeBufferManager.numberLinkList[bufferIdx];
+    unsigned int dstOffset = 64 + inodeNo * sizeof(DiskInode) + HEADER_SIG_SIZE;
+    fseek(this->imgFilePtr, dstOffset, SEEK_SET);
+
+    unsigned int writeByte = fwrite(&(this->inodeBuffer[bufferIdx]), 1, sizeof(DiskInode), this->imgFilePtr);
+
+    if (writeByte != sizeof(DiskInode)) {
+        MoFSErrno = 16;
+        return -1;
+    }
 
     return 0;
 }

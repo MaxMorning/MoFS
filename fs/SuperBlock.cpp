@@ -22,6 +22,12 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
 
     int inodeSegSize = sizeof(DiskInode) * inodeNum;
 
+    DeviceManager::deviceManager.blockBufferManager.InitLinkList(BLOCK_BUFFER_NUM);
+    DeviceManager::deviceManager.inodeBufferManager.InitLinkList(INODE_BUFFER_NUM);
+
+    memset(DeviceManager::deviceManager.blockDirty, 0, BLOCK_BUFFER_NUM * sizeof(bool));
+    memset(DeviceManager::deviceManager.inodeDirty, 0, INODE_BUFFER_NUM * sizeof(bool));
+
     superBlockRef.s_isize = (inodeSegSize + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
 

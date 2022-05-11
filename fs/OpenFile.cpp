@@ -50,7 +50,12 @@ int OpenFile::Write(char *buffer, int size) {
 
 int OpenFile::Close(bool updateTime) {
     // 关闭文件，但inode不一定写回磁盘。如果有其它文件还在使用，inode不会被释放
-     return this->f_inode->Close(updateTime);
+    if (this->f_inode != nullptr) {
+        // 这里特判是为了mkfs命令下的delete user操作
+        return this->f_inode->Close(updateTime);
+    }
+
+    return 0;
 }
 
 int OpenFile::Open(int flag, MemInode *inode, int uid, int gid) {

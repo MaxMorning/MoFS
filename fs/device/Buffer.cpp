@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file Buffer.cpp
  * @brief 内存缓存实现
  * @author 韩孟霖
@@ -10,31 +10,18 @@
 #include "../../include/device/Buffer.h"
 
 BufferLinkList::BufferLinkList(int bufferNum) {
-    this->forwardLinkList = new int[bufferNum];
-    for (int i = 0; i < bufferNum - 1; ++i) {
-        this->forwardLinkList[i] = i + 1;
-    }
-    this->forwardLinkList[bufferNum - 1] = -1;
+    this->prevLinkList = new int[bufferNum];
 
-
-    this->backwardLinkList = new int[bufferNum];
-    this->backwardLinkList[0] = -1;
-    for (int i = 1; i < bufferNum; ++i) {
-        this->backwardLinkList[i] = i - 1;
-    }
-
-
+    this->nextLinkList = new int[bufferNum];
 
     this->numberLinkList = new int[bufferNum];
-    memset(this->numberLinkList, -1, bufferNum * sizeof(int));
 
-    this->headPtr = 0;
-    this->rearPtr = 0;
+    this->InitLinkList(bufferNum);
 }
 
 BufferLinkList::~BufferLinkList() {
-    delete[] this->forwardLinkList;
-    delete[] this->backwardLinkList;
+    delete[] this->prevLinkList;
+    delete[] this->nextLinkList;
     delete[] this->numberLinkList;
 }
 
@@ -47,46 +34,82 @@ int BufferLinkList::GetBufferedIndex(int blockIdx) {
             return searchPtr;
         }
 
-        searchPtr = this->backwardLinkList[searchPtr];
+        searchPtr = this->nextLinkList[searchPtr];
     }
 
     return -1;
 }
 
 int BufferLinkList::AllocNewBuffer(int blockIdx, bool &releaseBuffer) {
-    int allocIdx = this->rearPtr;
+    int allocIdx = -1;
+    if (this->rearPtr == -1) {
+        // 当前全空
+        allocIdx = this->headPtr;
+    }
+    else {
+        allocIdx = this->nextLinkList[this->rearPtr];
+    }
     releaseBuffer = false;
     if (allocIdx == -1) {
         // 没有空闲缓存块，释放队尾的缓存块
-        allocIdx = this->forwardLinkList[allocIdx];
+        allocIdx = this->rearPtr;
         releaseBuffer = true;
     }
 
     // 将新分配的缓存块插入队首
     this->InsertHead(allocIdx);
 
+    this->numberLinkList[allocIdx] = blockIdx;
 
     return allocIdx;
 }
 
 void BufferLinkList::InsertHead(int bufferIdx) {
-    int old_head = this->headPtr;
-    int new_rear = this->forwardLinkList[bufferIdx];
-
-    // 原队首的前指针指向新块
-    this->forwardLinkList[old_head] = bufferIdx;
-    // 新队尾的后指针指向新块原来的后指针
-    this->backwardLinkList[new_rear] = this->backwardLinkList[bufferIdx];
-    // 尾指针指向新块原来的后指针
-    this->rearPtr = this->backwardLinkList[bufferIdx];
-    // 新块的前指针指向头结点
-    this->forwardLinkList[bufferIdx] = -1;
-    // 新块的后指针指向原队首
-    this->backwardLinkList[bufferIdx] = old_head;
-    // 头结点的后指针指向新块
-    this->headPtr = bufferIdx;
-    // 新块原来的后指针（即现在的rearPtr）的前指针指向新队尾
-    if (this->rearPtr != -1) {
-        this->forwardLinkList[this->rearPtr] = new_rear;
+    // 断开bufferIdx和链表的连接
+    int next_idx = this->nextLinkList[bufferIdx];
+    int prev_idx = this->prevLinkList[bufferIdx];
+    // 设置尾结点，prev_idx == -1表示分配的空闲buffer是队首结点，此时尾指针需要设置在新分配的buffer
+    this->rearPtr = prev_idx == -1 ? bufferIdx : prev_idx;
+    // bufferIdx前结点的后指针指向bufferIdx后结点
+    if (prev_idx >= 0) {
+        this->nextLinkList[prev_idx] = next_idx;
     }
+    else {
+        // 前结点是头结点
+        this->headPtr = next_idx;
+    }
+
+    // bufferIdx后结点的前指针指向bufferIdx的前结点
+    if (next_idx >= 0) {
+        this->prevLinkList[next_idx] = prev_idx;
+    }
+
+    // 将bufferIdx插入头部
+    int ori_head = this->headPtr;
+    // 原头结点的前指针指向bufferIdx
+    this->prevLinkList[ori_head] = bufferIdx;
+    // bufferIdx的后指针指向原头结点
+    this->nextLinkList[bufferIdx] = ori_head;
+    // bufferIdx的前指针指向head
+    this->prevLinkList[bufferIdx] = -1;
+    // head指向bufferIdx
+    this->headPtr = bufferIdx;
+}
+
+void BufferLinkList::InitLinkList(int bufferNum) {
+    this->prevLinkList[0] = -1;
+    for (int i = 1; i < bufferNum; ++i) {
+        this->prevLinkList[i] = i - 1;
+    }
+
+    for (int i = 0; i < bufferNum - 1; ++i) {
+        this->nextLinkList[i] = i + 1;
+    }
+    this->nextLinkList[bufferNum - 1] = -1;
+
+
+    memset(this->numberLinkList, -1, bufferNum * sizeof(int));
+
+    this->headPtr = 0;
+    this->rearPtr = -1;
 }
