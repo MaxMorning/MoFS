@@ -12,6 +12,7 @@
 #include <cstdlib>
 
 #include "../DiskInode.h"
+#include "Buffer.h"
 
 
 /// 块大小(字节)
@@ -19,6 +20,12 @@
 
 /// 设备前部占用空间(字节)，包括引导区、内核等
 #define HEADER_SIG_SIZE 200 * BLOCK_SIZE
+
+/// DiskInode 缓冲区的数量
+#define INODE_BUFFER_NUM 128
+
+/// Block 缓冲区的数量
+#define BLOCK_BUFFER_NUM 128
 
 /**
  * @brief 块设备管理器，包含缓存机制
@@ -71,10 +78,9 @@ public:
      * @brief 根据提供的blockNo，向磁盘或内存缓存中写入数据
      * @param blockNo 待写入的块号
      * @param buffer 待写入块中的缓冲区数据
-     * @param size 写入字节数，默认为BLOCK_SIZE
      * @return 返回实际写入的字节数
      */
-    unsigned int WriteBlock(int blockNo, void *buffer, int size = BLOCK_SIZE);
+    unsigned int WriteBlock(int blockNo, void *buffer);
 
     /**
      * @brief 读取指定编号的diskInode
@@ -97,6 +103,16 @@ public:
      * @param offset 偏移量
      */
     void SetOffset(int offset);
+
+
+    // 缓冲区相关
+    BufferLinkList inodeBufferManager{INODE_BUFFER_NUM};
+    DiskInode inodeBuffer[INODE_BUFFER_NUM];
+    bool inodeDirty[INODE_BUFFER_NUM]; ///< 标记脏inode
+
+    BufferLinkList blockBufferManager{BLOCK_BUFFER_NUM};
+    char blockBuffer[BLOCK_BUFFER_NUM][BLOCK_SIZE];
+    bool blockDirty[BLOCK_BUFFER_NUM]; ///< 标记脏block
 
 private:
     FILE* imgFilePtr{}; ///< DeviceManager 持有的file指针

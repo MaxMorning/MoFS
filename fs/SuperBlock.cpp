@@ -51,7 +51,7 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
     }
 
     // 写入间接管辖的空闲块
-    int freeBlocks[101];
+    int freeBlocks[128]{};
     int hundreds = (blockNum - superBlockRef.s_nfree) / 100;
     freeBlocks[0] = 100;
     for (int i = 0; i < hundreds; ++i) {
@@ -59,7 +59,7 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
             freeBlocks[j + 1] = i * 100 + j;
         }
 
-        DeviceManager::deviceManager.WriteBlock((i + 1) * 100, freeBlocks, 101 * sizeof(int));
+        DeviceManager::deviceManager.WriteBlock((i + 1) * 100, freeBlocks);
     }
 
 
@@ -85,7 +85,7 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
             Diagnose::PrintError("Cannot alloc free block.");
             return -1;
         }
-        DeviceManager::deviceManager.WriteBlock(freeBlock, freeBlocks, 101 * sizeof(int));
+        DeviceManager::deviceManager.WriteBlock(freeBlock, freeBlocks);
         freeBlocks[0] = freeBlock;
     }
 
@@ -157,7 +157,9 @@ int SuperBlock::AllocBlock() {
 int SuperBlock::ReleaseBlock(int blockIdx) {
     if (this->s_nfree == 100) {
         // 当前superBlock直接管辖的空闲块已满，将当前的这101字写入一个块中。这里存入blockIdx这个待释放的块中。
-        DeviceManager::deviceManager.WriteBlock(blockIdx, &(this->s_nfree), 101 * sizeof(int));
+        int readBuffer[128];
+        DeviceManager::deviceManager.WriteBlock(blockIdx, readBuffer);
+        memcpy(&(this->s_nfree), readBuffer, 101 * sizeof(int));
 
         this->s_nfree = 1;
         this->s_free[0] = blockIdx;
@@ -210,11 +212,11 @@ int SuperBlock::ReleaseInode(int inodeIdx) {
             return -1;
         }
 
-        int buffer[101];
+        int buffer[128]{};
         buffer[0] = blockIdx;
         memcpy(&(buffer[1]), this->s_inode, 100 * sizeof(int));
 
-        DeviceManager::deviceManager.WriteBlock(blockIdx, buffer, 101 * sizeof(int));
+        DeviceManager::deviceManager.WriteBlock(blockIdx, buffer);
 
         this->s_ninode = 1;
         this->s_inode[0] = inodeIdx;

@@ -232,12 +232,22 @@ int MemInode::Write(int offset, char *buffer, int size) {
 
     // 写第一个block的内容
     if (offset % BLOCK_SIZE == 0) {
-        // 无需加载块，直接写入即可
-        int expectedSize = min(size, BLOCK_SIZE);
-        unsigned int writeByteCnt = DeviceManager::deviceManager.WriteBlock(this->BlockMap(startLogicBlock), buffer,
-                                                                            expectedSize);
+        int firstBlock = this->BlockMap(startLogicBlock);
+        if (size > BLOCK_SIZE) {
+            // 无需加载块，直接写入即可
+            memcpy(writeBlockBuffer, buffer, BLOCK_SIZE);
+        }
+        else if (offset + size >= this->i_size) {
+            memset(writeBlockBuffer, 0, BLOCK_SIZE);
+            memcpy(writeBlockBuffer, buffer, size);
+        }
+        else {
+            DeviceManager::deviceManager.ReadBlock(firstBlock, writeBlockBuffer);
+            memcpy(writeBlockBuffer, buffer, size);
+        }
+        unsigned int writeByteCnt = DeviceManager::deviceManager.WriteBlock(firstBlock, writeBlockBuffer);
 
-        if (writeByteCnt != expectedSize) {
+        if (writeByteCnt != BLOCK_SIZE) {
             return -1;
         }
         currentBufferOffset += writeByteCnt;

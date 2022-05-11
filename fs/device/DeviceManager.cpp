@@ -20,6 +20,10 @@ DeviceManager::DeviceManager() {
 
     // 先给SuperBlock 和 inode区分配 256KB。这个值可以在SuperBlock加载时被修改。
     this->SetOffset(DEFAULT_OFFSET + HEADER_SIG_SIZE);
+
+    // 将两个dirty表置为false
+    memset(this->blockDirty, 0, BLOCK_BUFFER_NUM * sizeof(bool));
+    memset(this->inodeDirty, 0, INODE_BUFFER_NUM * sizeof(bool));
 }
 
 void DeviceManager::OpenImage(const char *imagePath) {
@@ -49,17 +53,53 @@ void DeviceManager::SetOffset(int offset) {
 }
 
 unsigned int DeviceManager::ReadBlock(int blockNo, void *buffer) {
+    // 检查缓存
+    int bufferIdx = blockBufferManager.GetBufferedIndex(blockNo);
+    if (bufferIdx != -1) {
+        // 有缓存
+        memcpy(buffer, blockBuffer[bufferIdx], BLOCK_SIZE);
+        return BLOCK_SIZE;
+    }
+
+    // 没缓存
     int dstOffset = blockNo * BLOCK_SIZE + this->blockContentOffset;
     fseek(this->imgFilePtr, dstOffset, SEEK_SET);
 
-    return fread(buffer, 1, BLOCK_SIZE, this->imgFilePtr);
+    int readByteCnt = fread(buffer, 1, BLOCK_SIZE, this->imgFilePtr);
+    if (readByteCnt == BLOCK_SIZE) {
+        // 只缓存读满的，不过不出意外都是读满的
+        bool isRelease = false;
+        int newBufferIdx = blockBufferManager.AllocNewBuffer(blockNo, isRelease);
+        if (isRelease && blockDirty[newBufferIdx]) {
+            // newBufferIdx指向的块的内容需要被写回磁盘中
+            fwrite(blockBuffer[newBufferIdx], 1, BLOCK_SIZE, this->imgFilePtr);
+        }
+        memcpy(blockBuffer[newBufferIdx], buffer, BLOCK_SIZE);
+    }
+    return readByteCnt;
 }
 
-unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer, int size) {
-    int dstOffset = blockNo * BLOCK_SIZE + this->blockContentOffset;
-    fseek(this->imgFilePtr, dstOffset, SEEK_SET);
+unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer) {
+    // 检查缓存
+    int bufferIdx = blockBufferManager.GetBufferedIndex(blockNo);
+    if (bufferIdx != -1) {
+        // 有缓存
+        memcpy(blockBuffer[bufferIdx], buffer, BLOCK_SIZE);
+        blockDirty[bufferIdx] = true;
+        return BLOCK_SIZE;
+    }
 
-    return fwrite(buffer, 1, size, this->imgFilePtr);
+    // 没缓存
+    bool isReleased = false;
+    int newBlockIdx = blockBufferManager.AllocNewBuffer(blockNo, isReleased);
+    if (isReleased && blockDirty[newBlockIdx]) {
+        // 有块因为新的缓存块需求而被释放，且该块脏
+        // 需要写回磁盘
+        fwrite(blockBuffer[newBlockIdx], 1, BLOCK_SIZE, this->imgFilePtr);
+    }
+    memcpy(blockBuffer[newBlockIdx], buffer, BLOCK_SIZE);
+    blockDirty[newBlockIdx] = true;
+    return BLOCK_SIZE;
 }
 
 int DeviceManager::ReadInode(int inodeNo, DiskInode *inodePtr) {

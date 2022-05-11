@@ -5,20 +5,26 @@ A simple File System implemented by MaxMorning.
 ### 应用层
 FTP CLI
 
-**涉及到的类**  
-User
-
 ### 原语层
-creat read write seek等
+mofs_creat mofs_read mofs_write mofs_lseek等
+
+### 用户层
+User.Open User.Create
 
 **涉及到的类**  
-File
+OpenFile User
 
 ### 系统层
-ReadBlock WriteBlock
+MemInode.Close DiskInode::DiskInodeFactory
 
 **涉及到的类**  
-MemInode DiskInode SuperBlock BlockManager
+MemInode DiskInode SuperBlock
+
+### 设备层
+BlockManager.ReadBlock  BlockManager.ReadInode
+
+**涉及到的类**  
+BlockManager Buffer
 
 ### 物理层
 fopen fread fwrite fseek fclose(操作系统提供)
