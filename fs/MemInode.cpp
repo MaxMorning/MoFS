@@ -392,8 +392,8 @@ int MemInode::Expand(int newSize) {
             int stage1table2 = min(newStage1 - 128, 128);
             if (this->i_addr[7] <= 0) {
                 // 原来的文件没有一级索引
-                this->i_addr[6] = SuperBlock::superBlock.AllocBlock();
-                if (this->i_addr[6] == -1) {
+                this->i_addr[7] = SuperBlock::superBlock.AllocBlock();
+                if (this->i_addr[7] == -1) {
                     return -1;
                 }
                 memset(indexBlockBuffer, -1, BLOCK_SIZE);

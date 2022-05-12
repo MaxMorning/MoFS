@@ -70,7 +70,7 @@ unsigned int DeviceManager::ReadBlock(int blockNo, void *buffer) {
     if (bufferIdx != -1) {
         // 有缓存
         memcpy(buffer, blockBuffer[bufferIdx], BLOCK_SIZE);
-        Diagnose::PrintLog("ReadBlock (Buffered) " + std::to_string(blockNo) + ' ' + std::to_string(bufferIdx));
+//        Diagnose::PrintLog("ReadBlock (Buffered) " + std::to_string(blockNo) + ' ' + std::to_string(bufferIdx));
         return BLOCK_SIZE;
     }
 
@@ -89,7 +89,7 @@ unsigned int DeviceManager::ReadBlock(int blockNo, void *buffer) {
         }
         memcpy(blockBuffer[newBufferIdx], buffer, BLOCK_SIZE);
         this->blockDirty[newBufferIdx] = false;
-        Diagnose::PrintLog("ReadBlock (No buffered) " + std::to_string(blockNo) + ' ' + std::to_string(newBufferIdx) + " current rear : " + std::to_string(blockBufferManager.rearPtr));
+//        Diagnose::PrintLog("ReadBlock (No buffered) " + std::to_string(blockNo) + ' ' + std::to_string(newBufferIdx) + " current rear : " + std::to_string(blockBufferManager.rearPtr));
     }
     return readByteCnt;
 }
@@ -101,7 +101,7 @@ unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer) {
         // 有缓存
         memcpy(blockBuffer[bufferIdx], buffer, BLOCK_SIZE);
         blockDirty[bufferIdx] = true;
-        Diagnose::PrintLog("WriteBlock (Buffered) " + std::to_string(blockNo) + ' ' + std::to_string(bufferIdx));
+//        Diagnose::PrintLog("WriteBlock (Buffered) " + std::to_string(blockNo) + ' ' + std::to_string(bufferIdx));
         return BLOCK_SIZE;
     }
 
@@ -115,8 +115,8 @@ unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer) {
     }
     memcpy(blockBuffer[newBufferIdx], buffer, BLOCK_SIZE);
     blockDirty[newBufferIdx] = true;
-    Diagnose::PrintLog("WriteBlock (No buffered) " + std::to_string(blockNo) + ' ' + std::to_string(newBufferIdx) + " : swap out block : " +
-                               std::to_string(swapBlockIdx) + " current rear : " + std::to_string(blockBufferManager.rearPtr));
+//    Diagnose::PrintLog("WriteBlock (No buffered) " + std::to_string(blockNo) + ' ' + std::to_string(newBufferIdx) + " : swap out block : " +
+//                               std::to_string(swapBlockIdx) + " current rear : " + std::to_string(blockBufferManager.rearPtr));
     return BLOCK_SIZE;
 }
 
@@ -178,7 +178,7 @@ int DeviceManager::StoreSuperBlock(void *superBlockPtr) {
 }
 
 unsigned int DeviceManager::WriteBlockToFile(int bufferIdx, int blockIdx) {
-    Diagnose::PrintLog("WriteBlockToFile " + std::to_string(bufferIdx) + ' ' + std::to_string(blockIdx));
+//    Diagnose::PrintLog("WriteBlockToFile " + std::to_string(bufferIdx) + ' ' + std::to_string(blockIdx));
     int dstOffset = blockIdx * BLOCK_SIZE + this->blockContentOffset;
     fseek(this->imgFilePtr, dstOffset, SEEK_SET);
 
