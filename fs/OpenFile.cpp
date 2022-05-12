@@ -206,7 +206,7 @@ bool OpenFile::HaveFilesInDir() {
         }
 
         for (int i = 0; i < readByteCnt / sizeof(DirEntry); ++i) {
-            if (entries[i].m_ino >= 0) {
+            if (entries[i].m_ino > 0) {
                 return true;
             }
         }

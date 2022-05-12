@@ -48,7 +48,7 @@ DeviceManager::~DeviceManager() {
     while (currentPtr >= 0) {
         if (this->blockDirty[currentPtr]) {
             // 脏块
-            this->WriteBlockToFile(currentPtr);
+            this->WriteBlockToFile(currentPtr, this->blockBufferManager.numberLinkList[currentPtr]);
         }
 
         currentPtr = blockBufferManager.nextLinkList[currentPtr];
@@ -65,11 +65,12 @@ void DeviceManager::SetOffset(int offset) {
 }
 
 unsigned int DeviceManager::ReadBlock(int blockNo, void *buffer) {
-    // 检查缓存
+// 检查缓存
     int bufferIdx = blockBufferManager.GetBufferedIndex(blockNo);
     if (bufferIdx != -1) {
         // 有缓存
         memcpy(buffer, blockBuffer[bufferIdx], BLOCK_SIZE);
+        Diagnose::PrintLog("ReadBlock (Buffered) " + std::to_string(blockNo) + ' ' + std::to_string(bufferIdx));
         return BLOCK_SIZE;
     }
 
@@ -80,14 +81,15 @@ unsigned int DeviceManager::ReadBlock(int blockNo, void *buffer) {
     int readByteCnt = fread(buffer, 1, BLOCK_SIZE, this->imgFilePtr);
     if (readByteCnt == BLOCK_SIZE) {
         // 只缓存读满的，不过不出意外都是读满的
-        bool isRelease = false;
-        int newBufferIdx = blockBufferManager.AllocNewBuffer(blockNo, isRelease);
-        if (isRelease && blockDirty[newBufferIdx]) {
+        int swapBlockIdx = -1;
+        int newBufferIdx = blockBufferManager.AllocNewBuffer(blockNo, swapBlockIdx);
+        if (swapBlockIdx != -1 && blockDirty[newBufferIdx]) {
             // newBufferIdx指向的块的内容需要被写回磁盘中
-            this->WriteBlockToFile(newBufferIdx);
+            this->WriteBlockToFile(newBufferIdx, swapBlockIdx);
         }
         memcpy(blockBuffer[newBufferIdx], buffer, BLOCK_SIZE);
         this->blockDirty[newBufferIdx] = false;
+        Diagnose::PrintLog("ReadBlock (No buffered) " + std::to_string(blockNo) + ' ' + std::to_string(newBufferIdx) + " current rear : " + std::to_string(blockBufferManager.rearPtr));
     }
     return readByteCnt;
 }
@@ -99,19 +101,22 @@ unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer) {
         // 有缓存
         memcpy(blockBuffer[bufferIdx], buffer, BLOCK_SIZE);
         blockDirty[bufferIdx] = true;
+        Diagnose::PrintLog("WriteBlock (Buffered) " + std::to_string(blockNo) + ' ' + std::to_string(bufferIdx));
         return BLOCK_SIZE;
     }
 
     // 没缓存
-    bool isReleased = false;
-    int newBlockIdx = blockBufferManager.AllocNewBuffer(blockNo, isReleased);
-    if (isReleased && blockDirty[newBlockIdx]) {
+    int swapBlockIdx = -1;
+    int newBufferIdx = blockBufferManager.AllocNewBuffer(blockNo, swapBlockIdx);
+    if (swapBlockIdx != -1 && blockDirty[newBufferIdx]) {
         // 有块因为新的缓存块需求而被释放，且该块脏
         // 需要写回磁盘
-        this->WriteBlockToFile(newBlockIdx);
+        this->WriteBlockToFile(newBufferIdx, swapBlockIdx);
     }
-    memcpy(blockBuffer[newBlockIdx], buffer, BLOCK_SIZE);
-    blockDirty[newBlockIdx] = true;
+    memcpy(blockBuffer[newBufferIdx], buffer, BLOCK_SIZE);
+    blockDirty[newBufferIdx] = true;
+    Diagnose::PrintLog("WriteBlock (No buffered) " + std::to_string(blockNo) + ' ' + std::to_string(newBufferIdx) + " : swap out block : " +
+                               std::to_string(swapBlockIdx) + " current rear : " + std::to_string(blockBufferManager.rearPtr));
     return BLOCK_SIZE;
 }
 
@@ -172,8 +177,9 @@ int DeviceManager::StoreSuperBlock(void *superBlockPtr) {
     return 0;
 }
 
-unsigned int DeviceManager::WriteBlockToFile(int bufferIdx) {
-    int dstOffset = this->blockBufferManager.numberLinkList[bufferIdx] * BLOCK_SIZE + this->blockContentOffset;
+unsigned int DeviceManager::WriteBlockToFile(int bufferIdx, int blockIdx) {
+    Diagnose::PrintLog("WriteBlockToFile " + std::to_string(bufferIdx) + ' ' + std::to_string(blockIdx));
+    int dstOffset = blockIdx * BLOCK_SIZE + this->blockContentOffset;
     fseek(this->imgFilePtr, dstOffset, SEEK_SET);
 
     return fwrite(this->blockBuffer[bufferIdx], BLOCK_SIZE, 1, this->imgFilePtr);

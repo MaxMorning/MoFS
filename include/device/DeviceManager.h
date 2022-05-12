@@ -84,10 +84,11 @@ public:
 
     /**
      * @brief 根据提供的bufferIdx，向磁盘中写入数据
-     * @param bufferIdx 待写入的缓存块号
+     * @param bufferIdx 待写入的缓存块
+     * @param blockIdx 待写入的块号
      * @return 返回实际写入的字节数
      */
-    unsigned int WriteBlockToFile(int bufferIdx);
+    unsigned int WriteBlockToFile(int bufferIdx, int blockIdx);
 
     /**
      * @brief 根据提供的bufferIdx，向磁盘中写入DiskInode

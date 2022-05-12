@@ -98,7 +98,7 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
     SuperBlock::superBlock.s_nextInodeBlk = freeBlocks[0];
 
 
-    // 0号块不使用
+    // 0号块不使用，0号inode不使用
     // 创建根目录文件
     SuperBlock::superBlock.s_rootInode = SuperBlock::superBlock.AllocDiskInode();
     if (SuperBlock::superBlock.s_rootInode == -1) {
@@ -113,8 +113,8 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
     rootInode.d_nlink = 1;
     rootInode.d_uid = 0;
     rootInode.d_gid = 0;
-    rootInode.d_size = 0; /// @note 这里大小设置为0可能会出错
-    memset(rootInode.d_addr, 0, 10 * sizeof(int));
+    rootInode.d_size = 0;
+    memset(rootInode.d_addr, -1, 10 * sizeof(int));
     rootInode.d_atime = std::time(nullptr);
     rootInode.d_mtime = rootInode.d_atime;
     // 将根目录文件写入0号块

@@ -40,7 +40,7 @@ int mofs_open(const char *pathname, int oflags,int mode) {
             if ((oflags & O_CREAT) == O_CREAT) {
                 // 调用者要求创建
                 MoFSErrno = 0;
-                open_fd = User::userPtr->Create(pathname, mode & 0777);
+                open_fd = User::userPtr->Create(pathname, MemInode::IALLOC | MemInode::IFMT | (mode & 0777));
                 if (open_fd < 0) {
                     // 这时候还找不到文件或目录，说明路径有问题
                     return -1;

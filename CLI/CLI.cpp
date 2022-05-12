@@ -558,7 +558,7 @@ void print_list(const char* pathname) {
             break;
         }
 
-        if (entryBuffer.m_ino == -1) {
+        if (entryBuffer.m_ino <= 0) {
             continue;
         }
 

@@ -43,10 +43,10 @@ public:
     /**
      * @brief 分配一个新的缓存块
      * @param blockIdx 目标块序号
-     * @param releaseBuffer 是否通过释放缓存块来获得可用的缓存块
+     * @param oldBlockIdx 被换出的块序号，-1为未换出
      * @return 分配的缓存块序号，缓存机制保证一定返回有意义的值
      */
-    int AllocNewBuffer(int blockIdx, bool &releaseBuffer);
+    int AllocNewBuffer(int blockIdx, int &oldBlockIdx);
 
     /**
      * 初始化链表
@@ -60,6 +60,11 @@ private:
      * @param bufferIdx 缓存块序号
      */
     void InsertHead(int bufferIdx);
+
+    /**
+     * @brief 打印链表内容，仅debug
+     */
+    void DebugPrintList();
 };
 
 #endif //MOFS_BUFFER_H

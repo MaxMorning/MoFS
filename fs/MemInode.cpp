@@ -226,7 +226,7 @@ int MemInode::Write(int offset, char *buffer, int size) {
     int currentBufferOffset = 0;
 
     int startLogicBlock = offset / BLOCK_SIZE;
-    int endLogicBlock = (this->i_size - 1) / BLOCK_SIZE;
+    int endLogicBlock = (offset + size - 1) / BLOCK_SIZE;
 
     char writeBlockBuffer[BLOCK_SIZE];
 
@@ -288,8 +288,8 @@ int MemInode::Write(int offset, char *buffer, int size) {
 
     // 写最后一块
     if (startLogicBlock < endLogicBlock) {
-        if (offset + size < this->i_size) {
-            // 文件尾部仍然有一些内容没有被修改，需要加载最后一块
+        if (offset + size < this->i_size && (offset + size) % BLOCK_SIZE != 0) {
+            // 待写入的尾部仍然有一些内容没有被修改，需要加载最后一块
             unsigned int readByteCnt = DeviceManager::deviceManager.ReadBlock(this->BlockMap(endLogicBlock), writeBlockBuffer);
             if (readByteCnt != BLOCK_SIZE) {
                 return -1;

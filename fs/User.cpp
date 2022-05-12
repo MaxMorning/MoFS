@@ -53,7 +53,7 @@ int SearchFileInodeByName(char* nameBuffer, int bufferSize, OpenFile& dirFile) {
         }
 
         for (int i = 0; i < readByteCnt / sizeof(DirEntry); ++i) {
-            if (entries[i].m_ino >= 0 && NameComp(nameBuffer, entries[i].m_name, bufferSize)) {
+            if (entries[i].m_ino > 0 && NameComp(nameBuffer, entries[i].m_name, bufferSize)) {
                 return entries[i].m_ino;
             }
         }
@@ -82,7 +82,7 @@ int RemoveEntryInDirFile(char* nameBuffer, int bufferSize, OpenFile& dirFile) {
         }
 
         for (int i = 0; i < readByteCnt / sizeof(DirEntry); ++i) {
-            if (entries[i].m_ino >= 0 && NameComp(nameBuffer, entries[i].m_name, bufferSize)) {
+            if (entries[i].m_ino > 0 && NameComp(nameBuffer, entries[i].m_name, bufferSize)) {
                 entries[i].m_ino = -1; // 将ino标记为-1，设置为空闲
 
                 // 写回
@@ -122,7 +122,7 @@ int InsertEntryInDirFile(char* nameBuffer, int bufferSize, int inodeIdx, OpenFil
         }
 
         for (int i = 0; i < readByteCnt / sizeof(DirEntry); ++i) {
-            if (entries[i].m_ino < 0) {
+            if (entries[i].m_ino <= 0) {
                 entries[i].m_ino = inodeIdx;
                 memset(entries[i].m_name, 0, NAME_MAX_LENGTH);
                 memcpy(entries[i].m_name, nameBuffer, bufferSize);
@@ -266,6 +266,7 @@ int User::Open(const char *path, int flags) {
         if (currentDiskInodeIndex == -1) {
             MoFSErrno = 2;
             Diagnose::PrintError("No such file.");
+            currentDirFile.Close(false);
             return -1;
         }
         else {
@@ -325,6 +326,7 @@ int User::Create(const char *path, int mode) {
         // 当前Dir已经存在，创建失败
         MoFSErrno = 5;
         Diagnose::PrintError("File already exist");
+        currentDirFile.Close(false);
         return -1;
     }
 
@@ -671,7 +673,9 @@ User::~User() {
     }
 
     // 关闭工作目录
-    this->userOpenFileTable[this->currentWorkDir].Close(false);
+    if (currentWorkDir >= 0) {
+        this->userOpenFileTable[this->currentWorkDir].Close(false);
+    }
 }
 
 User * User::ChangeUser(int uid, int gid) {
