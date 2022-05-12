@@ -74,6 +74,7 @@ void infinite_loop(istream &input_stream, int loop_time) {
             {"chgusr", CHGUSR_MAP_VALUE},
             {"cd", CD_MAP_VALUE},
             {"link", LINK_MAP_VALUE},
+            {"unlink", FDELETE_MAP_VALUE},
             {"exit", EXIT_MAP_VALUE},
             {"help", HELP_MAP_VALUE}
     };
@@ -535,6 +536,20 @@ int process_command(const string &command, stringstream &input_stream,
     return 0;
 }
 
+/**
+ * @brief 将tm结构体转换为string
+ * @param t 传入的tm结构体
+ * @return 转换结果
+ */
+string ConvertTimeToString(const struct tm& t) {
+    char buffer[20];
+    sprintf(buffer, "%04d-%02d-%02d %02d:%02d:%02d",
+            t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
+            t.tm_hour, t.tm_min, t.tm_sec);
+
+    return string{buffer};
+}
+
 void print_list(const char* pathname) {
     FileStat fileStat;
     DirEntry entryBuffer;
@@ -545,7 +560,12 @@ void print_list(const char* pathname) {
         Diagnose::PrintErrno("Dir not find");
     }
 
-    printf("Permissions\t\tInode\tModify Time\t\tAccess Time\t\tSize(B)\tLinks\t\tName\n");
+    cout << std::left << setw(15) << "Permissions" << setw(8) << "Inode"
+        << setw(8) << "User" << setw(8) << "Group"
+        << setw(26) << "Access Time" << setw(26) << "Modify Time"
+        << setw(12) << "Size(B)" << setw(8) << "Links" << "Name"
+        << endl;
+//    printf("Permissions\t\tInode\tAccess Time\t\tModify Time\t\tSize(B)\tLinks\t\tName\n");
 
     while (true) {
         int read_byte_cnt = mofs_read(dir_fd, &entryBuffer, sizeof(entryBuffer));
@@ -588,17 +608,23 @@ void print_list(const char* pathname) {
         struct tm acc_time = *localtime((const time_t *const)(&acc_tt));
         struct tm mod_time = *localtime((const time_t *const)(&mod_tt));
 
-        printf("%s\t%d\t%04d-%02d-%02d %02d:%02d:%02d\t%04d-%02d-%02d %02d:%02d:%02d\t%d\t%d\t%s\n", authority_str,
-               fileStat.st_ino,
-               acc_time.tm_year + 1900, acc_time.tm_mon + 1, acc_time.tm_mday,
-               acc_time.tm_hour, acc_time.tm_min, acc_time.tm_sec,
+        cout << std::left << setw(15) << authority_str << setw(8) << fileStat.st_ino
+             << setw(8) << fileStat.st_uid << setw(8) << fileStat.st_gid
+             << setw(26) << ConvertTimeToString(acc_time) << setw(26) << ConvertTimeToString(mod_time)
+             << setw(12) << fileStat.st_size << setw(8) << fileStat.st_nlink << entryBuffer.m_name
+             << endl;
 
-               mod_time.tm_year + 1900, mod_time.tm_mon + 1, mod_time.tm_mday,
-               mod_time.tm_hour, mod_time.tm_min, mod_time.tm_sec,
-
-               fileStat.st_size,
-               fileStat.st_nlink,
-               entryBuffer.m_name);
+//        printf("%s\t%d\t%04d-%02d-%02d %02d:%02d:%02d\t%04d-%02d-%02d %02d:%02d:%02d\t%d\t%d\t%s\n", authority_str,
+//               fileStat.st_ino,
+//               acc_time.tm_year + 1900, acc_time.tm_mon + 1, acc_time.tm_mday,
+//               acc_time.tm_hour, acc_time.tm_min, acc_time.tm_sec,
+//
+//               mod_time.tm_year + 1900, mod_time.tm_mon + 1, mod_time.tm_mday,
+//               mod_time.tm_hour, mod_time.tm_min, mod_time.tm_sec,
+//
+//               fileStat.st_size,
+//               fileStat.st_nlink,
+//               entryBuffer.m_name);
     }
 
     mofs_close(dir_fd);

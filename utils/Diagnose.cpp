@@ -24,5 +24,5 @@ void Diagnose::PrintLog(const std::string& logInfo) {
 }
 
 void Diagnose::PrintErrno(const string &errorInfo) {
-    cerr << "[ERROR]\t" << errorInfo << ", errno(" << MoFSErrno << "):" << ErrnoMsg[MoFSErrno] << endl;
+    cout << "[ERROR]\t" << errorInfo << ", errno(" << MoFSErrno << "):" << ErrnoMsg[MoFSErrno] << endl;
 }

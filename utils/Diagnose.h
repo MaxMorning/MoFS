@@ -28,6 +28,10 @@ public:
      */
     static void PrintLog(const std::string& logInfo);
 
+    /**
+     * @brief 打印带errno的报错信息，使用cout输出
+     * @param errorInfo 报错信息
+     */
     static void PrintErrno(const std::string& errorInfo);
 };
 
