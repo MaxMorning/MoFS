@@ -17,6 +17,7 @@
 #include "include/Primitive.h"
 #include "include/MoFSErrno.h"
 #include "include/CLI.h"
+#include "FTP/common.h"
 
 using namespace std;
 
@@ -57,7 +58,9 @@ int main(int argc, char* argv[]) {
 
     InitSystem();
 
-    infinite_loop(cin, -1);
+    server(8021);
+
+//    infinite_loop(cin, -1);
 
     if (-1 == shutdown()) {
         Diagnose::PrintError("Shutdown error.");
