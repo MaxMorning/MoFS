@@ -10,55 +10,36 @@
 #include <string>
 
 #include "common.h"
+#include "../include/User.h"
+#include "../utils/Diagnose.h"
+#include "../include/Primitive.h"
 
 #define BUF_SIZE 8192
 
-ssize_t send_file(int out_fd, int in_fd, off_t *offset, size_t count) {
-    off_t orig;
+int send_file(int out_fd, int in_fd, size_t count) {
     char buf[BUF_SIZE];
     size_t toRead, numRead, numSent, totSent;
 
-    if (offset != nullptr) {
-        /* Save current file offset and set offset to value in '*offset' */
-        orig = lseek(in_fd, 0, SEEK_CUR);
-        if (orig == -1)
-            return -1;
-        if (lseek(in_fd, *offset, SEEK_SET) == -1)
-            return -1;
-    }
+    mofs_lseek(in_fd, 0, SEEK_SET);
 
-    totSent = 0;
-    while (count > 0) {
-        toRead = count < BUF_SIZE ? count : BUF_SIZE;
-
-        numRead = read(in_fd, buf, toRead);
-        if (numRead == -1)
-            return -1;
-        if (numRead == 0)
-            break;                      /* EOF */
-
-        numSent = write(out_fd, buf, numRead);
-        if (numSent == -1)
-            return -1;
-        if (numSent == 0) {               /* Should never happen */
-            perror("send_file: write() transferred 0 bytes");
-            exit(-1);
+    int send_byte_sum = 0;
+    while (true) {
+        int read_byte_cnt = mofs_read(in_fd, buf, BUF_SIZE);
+        if (read_byte_cnt <= 0) {
+            break;
         }
 
-        count -= numSent;
-        totSent += numSent;
+        int send_byte_cnt = send(out_fd, buf, read_byte_cnt, 0);
+        if (send_byte_cnt < 0) {
+            perror("Send error");
+            break;
+        }
+        send_byte_sum += send_byte_cnt;
+        if (send_byte_cnt == 0) {
+            break;
+        }
     }
-
-    if (offset != nullptr) {
-        /* Return updated file offset in '*offset', and reset the file offset
-           to the value it had when we were called. */
-        *offset = lseek(in_fd, 0, SEEK_CUR);
-        if (*offset == -1)
-            return -1;
-        if (lseek(in_fd, orig, SEEK_SET) == -1)
-            return -1;
-    }
-    return totSent;
+    return send_byte_sum;
 }
 
 
@@ -142,7 +123,7 @@ void response(Command *cmd, State *state) {
 void ftp_user(Command *cmd, State *state) {
     const int total_usernames = sizeof(usernames) / sizeof(char *);
     if (lookup(cmd->arg, usernames, total_usernames) >= 0) {
-        state->username = (char* )malloc(32);
+        state->username = (char *) malloc(32);
         memset(state->username, 0, 32);
         strcpy(state->username, cmd->arg);
         state->username_ok = 1;
@@ -170,7 +151,7 @@ void ftp_pasv(Command *cmd, State *state) {
         int ip[4];
         char buff[255];
         char *response = "227 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\n";
-        Port *port = (Port*)malloc(sizeof(Port));
+        Port *port = (Port *) malloc(sizeof(Port));
         gen_port(port);
         getip(state->connection, ip);
 
@@ -193,78 +174,130 @@ void ftp_pasv(Command *cmd, State *state) {
     write_state(state);
 }
 
+/**
+ * @brief 将tm结构体转换为string
+ * @param t 传入的tm结构体
+ * @return 转换结果
+ */
+string ConvertTimeToString(const struct tm &t);
+
 /** LIST command */
+// cmd->arg 是要列出的目录
 void ftp_list(Command *cmd, State *state) {
     if (state->logged_in == 1) {
-        struct dirent *entry;
-        struct stat statbuf;
-        struct tm *time;
-        char timebuff[80], current_dir[BSIZE];
         int connection;
-        time_t rawtime;
+        int dir_fd;
 
-        /* TODO: dynamic buffering maybe? */
-        char cwd[BSIZE], cwd_orig[BSIZE];
-        memset(cwd, 0, BSIZE);
-        memset(cwd_orig, 0, BSIZE);
-
-        /* Later we want to go to the original path */
-        getcwd(cwd_orig, BSIZE);
-
-        /* Just chdir to specified path */
-        if (strlen(cmd->arg) > 0 && cmd->arg[0] != '-') {
-            chdir(cmd->arg);
+        if (cmd->arg[0] == '-') {
+            dir_fd = mofs_open(User::userPtr->currentWorkPath, MOFS_RDONLY | MOFS_DIRECTORY, 0);
+            Diagnose::PrintLog("Current work dir " + string(User::userPtr->currentWorkPath) + ", " +
+                               to_string(User::userPtr->userOpenFileTable[dir_fd].f_inode->i_number));
+        } else {
+            dir_fd = mofs_open(cmd->arg, MOFS_RDONLY | MOFS_DIRECTORY, 0);
         }
-
-        getcwd(cwd, BSIZE);
-        DIR *dp = opendir(cwd);
-
-        if (!dp) {
+        if (dir_fd == -1) {
             state->message = "550 Failed to open directory.\n";
         } else {
             if (state->mode == SERVER) {
-
                 connection = accept_connection(state->sock_pasv);
                 state->message = "150 Here comes the directory listing.\n";
                 puts(state->message);
+                write_state(state);
 
-                while (entry = readdir(dp)) {
-                    if (stat(entry->d_name, &statbuf) == -1) {
-                        fprintf(stderr, "FTP: Error reading file stats...\n");
-                    } else {
-                        char *perms = (char*)malloc(9);
-                        memset(perms, 0, 9);
+                FileStat fileStat;
+                DirEntry entryBuffer;
 
-                        /* Convert time_t to tm struct */
-                        rawtime = statbuf.st_mtime;
-                        time = localtime(&rawtime);
-                        strftime(timebuff, 80, "%b %d %H:%M", time);
-                        str_perm((statbuf.st_mode & ALLPERMS), perms);
-                        dprintf(connection,
-                                "%c%s %5d %4d %4d %8d %s %s\r\n",
-                                (entry->d_type == DT_DIR) ? 'd' : '-',
-                                perms, statbuf.st_nlink,
-                                statbuf.st_uid,
-                                statbuf.st_gid,
-                                statbuf.st_size,
-                                timebuff,
-                                entry->d_name);
+                mofs_lseek(dir_fd, 0, SEEK_SET);
+
+                while (true) {
+                    int read_byte_cnt = mofs_read(dir_fd, &entryBuffer, sizeof(entryBuffer));
+                    Diagnose::PrintLog("Dir file read " + to_string(read_byte_cnt) + " byte(s).");
+                    if (read_byte_cnt == 0) {
+                        break;
+                    }
+
+                    if (read_byte_cnt != sizeof(entryBuffer)) {
+                        Diagnose::PrintErrno("Read dir error");
+                        state->message = "550 Failed to open directory.\n";
+                        break;
+                    }
+                    if (entryBuffer.m_ino <= 0) {
+                        continue;
+                    }
+
+                    if (-1 == mofs_inode_stat(entryBuffer.m_ino, &fileStat)) {
+                        Diagnose::PrintErrno("Get stat error.");
+                    }
+
+                    // 权限信息
+                    char authority_str[10] = "---------";
+                    for (int i = 0; i < 3; ++i) {
+                        if (((fileStat.st_mode >> (3 * i + 2)) & 1) == 1) {
+                            authority_str[8 - (3 * i + 2)] = 'r';
+                        }
+
+                        if (((fileStat.st_mode >> (3 * i + 1)) & 1) == 1) {
+                            authority_str[8 - (3 * i + 1)] = 'w';
+                        }
+
+                        if (((fileStat.st_mode >> (3 * i + 0)) & 1) == 1) {
+                            authority_str[8 - (3 * i + 0)] = 'x';
+                        }
+                    }
+
+                    // 转换时间
+                    time_t acc_tt = fileStat.st_atime;
+                    time_t mod_tt = fileStat.st_mtime;
+                    struct tm acc_time = *localtime((const time_t *const) (&acc_tt));
+                    struct tm mod_time = *localtime((const time_t *const) (&mod_tt));
+
+                    // 检查是否是目录
+                    OpenFile openFile;
+                    if (-1 == OpenFile::OpenFileFactory(openFile, entryBuffer.m_ino, User::userPtr->uid, User::userPtr->gid, FileFlags::MOFS_READ)) {
+                        // 无法加载
+                        continue;
+                    }
+
+                    bool isDir = openFile.IsDirFile();
+                    openFile.Close(false);
+
+                    char time_buffer[32];
+                    strftime(time_buffer, 32, "%b %d %H:%M", &mod_time);
+
+                    char buffer[1024];
+                    sprintf(buffer,
+                            "%c%s %5d %4d %4d %8d %s %s\r\n",
+                            isDir ? 'd' : '-',
+                            authority_str,
+                            fileStat.st_nlink,
+                            fileStat.st_uid,
+                            fileStat.st_gid,
+                            fileStat.st_size,
+                            time_buffer,
+                            entryBuffer.m_name);
+
+                    Diagnose::PrintLog("Entry data : " + string{buffer});
+                    int expected_length = strlen(buffer) + 1;
+                    int send_byte_cnt = send(connection, buffer, expected_length, 0);
+                    if (send_byte_cnt != expected_length) {
+                        state->message = "550 unknown error.\n";
+                        write_state(state);
+                        close(connection);
                     }
                 }
-                write_state(state);
+
                 state->message = "226 Directory send OK.\n";
                 state->mode = NORMAL;
                 close(connection);
-                close(state->sock_pasv);
 
             } else if (state->mode == CLIENT) {
                 state->message = "502 Command not implemented.\n";
             } else {
                 state->message = "425 Use PASV or PORT first.\n";
             }
+
+            mofs_close(dir_fd);
         }
-        closedir(dp);
-        chdir(cwd_orig);
     } else {
         state->message = "530 Please login with USER and PASS.\n";
     }
@@ -287,9 +320,10 @@ void ftp_pwd(Command *cmd, State *state) {
         char cwd[BSIZE];
         char result[BSIZE];
         memset(result, 0, BSIZE);
-        if (getcwd(cwd, BSIZE - 8) != NULL) {    //Making sure the length of cwd and additional text don't exceed BSIZE
+        if (getcwd(cwd, BSIZE - 8) !=
+            nullptr) {    //Making sure the length of cwd and additional text don't exceed BSIZE
             strcat(result, "257 \"");        //5 characters
-            strcat(result, cwd);        //strlen(cwd)
+            strcat(result, User::userPtr->currentWorkPath);        //strlen(cwd)
             strcat(result, "\"\n");        //2 characters + 0 byte
             state->message = result;
         } else {
@@ -302,7 +336,7 @@ void ftp_pwd(Command *cmd, State *state) {
 /** CWD command */
 void ftp_cwd(Command *cmd, State *state) {
     if (state->logged_in) {
-        if (chdir(cmd->arg) == 0) {
+        if (User::userPtr->ChangeDir(cmd->arg) == 0) {
             state->message = "250 Directory successfully changed.\n";
         } else {
             state->message = "550 Failed to change directory.\n";
@@ -331,7 +365,7 @@ void ftp_mkd(Command *cmd, State *state) {
 
         /* Absolute path */
         if (cmd->arg[0] == '/') {
-            if (mkdir(cmd->arg, S_IRWXU) == 0) {
+            if (mofs_mkdir(cmd->arg, 0777) == 0) {
                 strcat(res, "257 \"");
                 strcat(res, cmd->arg);
                 strcat(res, "\" new directory created.\n");
@@ -342,7 +376,7 @@ void ftp_mkd(Command *cmd, State *state) {
         }
             /* Relative path */
         else {
-            if (mkdir(cmd->arg, S_IRWXU) == 0) {
+            if (mofs_mkdir(cmd->arg, 0777) == 0) {
                 sprintf(res, "257 \"%s/%s\" new directory created.\n", cwd, cmd->arg); //32 additional characters
                 state->message = res;
             } else {
@@ -358,133 +392,118 @@ void ftp_mkd(Command *cmd, State *state) {
 /** RETR command */
 void ftp_retr(Command *cmd, State *state) {
 
-    if (fork() == 0) {
-        int connection;
-        int fd;
-        struct stat stat_buf;
-        off_t offset = 0;
-        int sent_total = 0;
-        if (state->logged_in) {
+    int connection;
+    int fd;
 
-            /* Passive mode */
-            if (state->mode == SERVER) {
-                if (access(cmd->arg, R_OK) == 0 && (fd = open(cmd->arg, O_RDONLY))) {
-                    fstat(fd, &stat_buf);
+    int sent_total = 0;
+    if (state->logged_in) {
 
-                    state->message = "150 Opening BINARY mode data connection.\n";
+        /* Passive mode */
+        if (state->mode == SERVER) {
+            fd = mofs_open(cmd->arg, MOFS_RDONLY, 0);
+            if (fd >= 0) {
+                state->message = "150 Opening BINARY mode data connection.\n";
 
-                    write_state(state);
+                write_state(state);
 
-                    connection = accept_connection(state->sock_pasv);
-                    close(state->sock_pasv);
-                    if (sent_total = send_file(connection, fd, &offset, stat_buf.st_size)) {
+                int file_size = User::userPtr->userOpenFileTable[fd].f_inode->i_size;
 
-                        if (sent_total != stat_buf.st_size) {
-                            perror("ftp_retr:send_file");
-                            exit(EXIT_SUCCESS);
-                        }
+                connection = accept_connection(state->sock_pasv);
+                sent_total = send_file(connection, fd, file_size);
+                if (sent_total) {
 
-                        state->message = "226 File send OK.\n";
-                    } else {
-                        state->message = "550 Failed to read file.\n";
+                    if (sent_total != file_size) {
+                        perror("ftp_retr:send_file");
+                        exit(EXIT_SUCCESS);
                     }
+
+                    state->message = "226 File send OK.\n";
                 } else {
-                    state->message = "550 Failed to get file\n";
+                    state->message = "550 Failed to read file.\n";
                 }
+
+                mofs_close(fd);
+                close(connection);
             } else {
-                state->message = "550 Please use PASV instead of PORT.\n";
+                state->message = "550 Failed to get file\n";
             }
         } else {
-            state->message = "530 Please login with USER and PASS.\n";
+            state->message = "550 Please use PASV instead of PORT.\n";
         }
-
-        close(fd);
-        close(connection);
-        write_state(state);
-        exit(EXIT_SUCCESS);
+    } else {
+        state->message = "530 Please login with USER and PASS.\n";
     }
-    state->mode = NORMAL;
-    close(state->sock_pasv);
+
+
+    write_state(state);
 }
 
 /** Handle STOR command. TODO: check permissions. */
 void ftp_stor(Command *cmd, State *state) {
-    if (fork() == 0) {
-        int connection, fd;
-        off_t offset = 0;
-        int pipefd[2];
-        int res = 1;
-        const int buff_size = 8192;
+    int connection, fd;
+    const int buff_size = 8192;
 
-        FILE *fp = fopen(cmd->arg, "w");
+    fd = mofs_open(cmd->arg, MOFS_WRONLY | MOFS_CREAT, 0777);
 
-        if (fp == NULL) {
-            /* TODO: write status message here! */
-            perror("ftp_stor:fopen");
-            state->message = "550 No such file or directory.\n";
-        } else if (state->logged_in) {
-            if (!(state->mode == SERVER)) {
-                state->message = "550 Please use PASV instead of PORT.\n";
-            }
-                /* Passive mode */
-            else {
-                fd = fileno(fp);
-                connection = accept_connection(state->sock_pasv);
-//                close(state->sock_pasv);
+    if (fd == -1) {
+        /* TODO: write status message here! */
+        perror("ftp_stor:fopen");
+        state->message = "550 No such file or directory.\n";
+    } else if (state->logged_in) {
+        if (state->mode != SERVER) {
+            state->message = "550 Please use PASV instead of PORT.\n";
+        }
+            /* Passive mode */
+        else {
+            connection = accept_connection(state->sock_pasv);
 
-                state->message = "125 Data connection already open; transfer starting.\n";
-                write_state(state);
+            state->message = "125 Data connection already open; transfer starting.\n";
+            write_state(state);
 
-                // 将connection中读到的数据写入fd中。原作者使用了splice函数。这是一个Linux独有的函数，需要将其替换掉。
-                /* Using splice function for file receiving.
-                 * The splice() system call first appeared in Linux 2.6.17.
-                 */
+            // 将connection中读到的数据写入fd中。原作者使用了splice函数。这是一个Linux独有的函数，需要将其替换掉。
+            /* Using splice function for file receiving.
+             * The splice() system call first appeared in Linux 2.6.17.
+             */
 
 //        while ((res = splice(connection, 0, pipefd[1], NULL, buff_size, SPLICE_F_MORE | SPLICE_F_MOVE))>0){
 //          splice(pipefd[0], NULL, fd, 0, buff_size, SPLICE_F_MORE | SPLICE_F_MOVE);
 //        }
-                char transfer_buffer[buff_size];
-                long write_byte_cnt = 1;
-                int total_trans_byte = 0;
-                errno = 0;
-                while (true) {
-                    long recv_byte_cnt = recv(connection, transfer_buffer, buff_size, 0);
-                    printf("Recv %ld byte(s)\n", recv_byte_cnt);
-                    if (recv_byte_cnt <= 0) {
-                        // 读取完成
-                        break;
-                    }
-
-                    write_byte_cnt = write(fd, transfer_buffer, recv_byte_cnt);
-                    if (write_byte_cnt != recv_byte_cnt) {
-                        // 没有全部写入，有问题
-                        break;
-                    }
-
-                    total_trans_byte += write_byte_cnt;
+            char transfer_buffer[buff_size];
+            long write_byte_cnt = 1;
+            int total_trans_byte = 0;
+            errno = 0;
+            while (true) {
+                long recv_byte_cnt = recv(connection, transfer_buffer, buff_size, 0);
+                printf("Recv %ld byte(s)\n", recv_byte_cnt);
+                if (recv_byte_cnt <= 0) {
+                    // 读取完成
+                    break;
                 }
 
-                /* Internal error */
-                if (write_byte_cnt <= -1) {
-                    perror("ftp_stor: transfer");
-                    exit(EXIT_SUCCESS);
-                } else {
-                    printf("Transfer %d byte(s).\n", total_trans_byte);
-                    state->message = "226 File send OK.\n";
+                write_byte_cnt = mofs_write(fd, transfer_buffer, recv_byte_cnt);
+                if (write_byte_cnt != recv_byte_cnt) {
+                    // 没有全部写入，有问题
+                    break;
                 }
-                close(connection);
-                close(fd);
+
+                total_trans_byte += write_byte_cnt;
             }
-        } else {
-            state->message = "530 Please login with USER and PASS.\n";
-        }
-        close(connection);
-        write_state(state);
-        exit(EXIT_SUCCESS);
-    }
-    state->mode = NORMAL;
-    close(state->sock_pasv);
 
+            /* Internal error */
+            if (write_byte_cnt <= -1) {
+                perror("ftp_stor: transfer");
+                exit(EXIT_SUCCESS);
+            } else {
+                printf("Transfer %d byte(s).\n", total_trans_byte);
+                state->message = "226 File send OK.\n";
+            }
+            close(connection);
+            mofs_close(fd);
+        }
+    } else {
+        state->message = "530 Please login with USER and PASS.\n";
+    }
+    write_state(state);
 }
 
 /** ABOR command */
@@ -523,7 +542,7 @@ void ftp_type(Command *cmd, State *state) {
 /** Handle DELE command */
 void ftp_dele(Command *cmd, State *state) {
     if (state->logged_in) {
-        if (unlink(cmd->arg) == -1) {
+        if (mofs_unlink(cmd->arg) == -1) {
             state->message = "550 File unavailable.\n";
         } else {
             state->message = "250 Requested file action okay, completed.\n";
@@ -539,7 +558,7 @@ void ftp_rmd(Command *cmd, State *state) {
     if (!state->logged_in) {
         state->message = "530 Please login first.\n";
     } else {
-        if (rmdir(cmd->arg) == 0) {
+        if (unlink(cmd->arg) == 0) {
             state->message = "250 Requested file action okay, completed.\n";
         } else {
             state->message = "550 Cannot delete directory.\n";
@@ -552,12 +571,12 @@ void ftp_rmd(Command *cmd, State *state) {
 /** Handle SIZE (RFC 3659) */
 void ftp_size(Command *cmd, State *state) {
     if (state->logged_in) {
-        struct stat statbuf;
+        FileStat fileStat;
         char filesize[128];
         memset(filesize, 0, 128);
         /* Success */
-        if (stat(cmd->arg, &statbuf) == 0) {
-            sprintf(filesize, "213 %d\n", statbuf.st_size);
+        if (mofs_stat(cmd->arg, &fileStat) == 0) {
+            sprintf(filesize, "213 %d\n", fileStat.st_size);
             state->message = filesize;
         } else {
             state->message = "550 Could not get file size.\n";
@@ -567,37 +586,4 @@ void ftp_size(Command *cmd, State *state) {
     }
 
     write_state(state);
-
-}
-
-/** 
- * Converts permissions to string. e.g. rwxrwxrwx 
- * @param perm Permissions mask
- * @param str_perm Pointer to string representation of permissions
- */
-void str_perm(int perm, char *str_perm) {
-    int curperm = 0;
-    int flag = 0;
-    int read, write, exec;
-
-    /* Flags buffer */
-    char fbuff[3];
-
-    read = write = exec = 0;
-
-    int i;
-    for (i = 6; i >= 0; i -= 3) {
-        /* Explode permissions of user, group, others; starting with users */
-        curperm = ((perm & ALLPERMS) >> i) & 0x7;
-
-        memset(fbuff, 0, 3);
-        /* Check rwx flags for each*/
-        read = (curperm >> 2) & 0x1;
-        write = (curperm >> 1) & 0x1;
-        exec = (curperm >> 0) & 0x1;
-
-        sprintf(fbuff, "%c%c%c", read ? 'r' : '-', write ? 'w' : '-', exec ? 'x' : '-');
-        strcat(str_perm, fbuff);
-
-    }
 }

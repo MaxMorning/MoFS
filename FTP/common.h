@@ -7,18 +7,17 @@
  * @note 有所改动以修正bug，调整排版和适配MoFS
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 #include <unistd.h>
-#include <signal.h>
+#include <csignal>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <pwd.h>
 #include <netinet/in.h>
-#include <time.h>
+#include <ctime>
 #include <dirent.h>
 #include <arpa/inet.h>
 

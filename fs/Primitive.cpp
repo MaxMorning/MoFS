@@ -37,7 +37,7 @@ int mofs_open(const char *pathname, int oflags,int mode) {
     if (open_fd < 0) {
         if (MoFSErrno == 2) {
             // 文件不存在，或者路径有误
-            if ((oflags & O_CREAT) == O_CREAT) {
+            if ((oflags & MOFS_CREAT) == MOFS_CREAT) {
                 // 调用者要求创建
                 MoFSErrno = 0;
                 open_fd = User::userPtr->Create(pathname, MemInode::IALLOC | MemInode::IFMT | (mode & 0777));
@@ -60,14 +60,14 @@ int mofs_open(const char *pathname, int oflags,int mode) {
     }
 
     // 这里开始，open_fd >= 0，需要处理append和directory
-    if ((oflags & O_DIRECTORY) == O_DIRECTORY) {
+    if ((oflags & MOFS_DIRECTORY) == MOFS_DIRECTORY) {
         if (!User::userPtr->userOpenFileTable[open_fd].IsDirFile()) {
             MoFSErrno = 6;
             return User::userPtr->Close(open_fd);
         }
     }
 
-    if ((oflags & O_APPEND) == O_APPEND) {
+    if ((oflags & MOFS_APPEND) == MOFS_APPEND) {
         mofs_lseek(open_fd, 1, SEEK_END);
     }
 

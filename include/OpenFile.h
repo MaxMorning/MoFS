@@ -21,9 +21,8 @@
  */
 enum FileFlags
 {
-    FREAD = 0x1,			///< 读请求类型
-    FWRITE = 0x2,			///< 写请求类型
-    FPIPE = 0x4				///< 管道类型(不使用)
+    MOFS_READ = 0x1,			///< 读请求类型
+    MOFS_WRITE = 0x2,			///< 写请求类型
 };
 
 class OpenFile {

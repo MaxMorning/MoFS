@@ -54,7 +54,8 @@ int main(int argc, char* argv[]) {
     // 初始化
     DeviceManager::deviceManager.OpenImage(imagePath);
 
-    DeviceManager::deviceManager.LoadSuperBlock(&SuperBlock::superBlock);
+    SuperBlock::MakeFS(20 * 1024 * 1024, 2048);
+//    DeviceManager::deviceManager.LoadSuperBlock(&SuperBlock::superBlock);
 
     InitSystem();
 
@@ -62,9 +63,11 @@ int main(int argc, char* argv[]) {
 
 //    infinite_loop(cin, -1);
 
-    if (-1 == shutdown()) {
-        Diagnose::PrintError("Shutdown error.");
-        exit(-1);
-    }
+    Diagnose::PrintLog("Server done.");
+
+//    if (-1 == shutdown()) {
+//        Diagnose::PrintError("Shutdown error.");
+//        exit(-1);
+//    }
     return 0;
 }

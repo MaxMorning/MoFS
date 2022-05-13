@@ -163,6 +163,7 @@ int InsertEntryInDirFile(char* nameBuffer, int bufferSize, int inodeIdx, OpenFil
         return -1;
     }
 
+    printf("HHit %d %d\n\n", dirFile.f_inode->i_size, dirFile.f_inode->i_number);
     return 0;
 }
 
@@ -184,7 +185,7 @@ int User::GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffe
         currentDiskInodeIndex = this->userOpenFileTable[this->currentWorkDir].f_inode->i_number;
     }
 
-    if (-1 == OpenFile::OpenFileFactory(currentDirFile, currentDiskInodeIndex, this->uid, this->gid, FileFlags::FREAD)) {
+    if (-1 == OpenFile::OpenFileFactory(currentDirFile, currentDiskInodeIndex, this->uid, this->gid, FileFlags::MOFS_READ)) {
         return -1;
     }
 
@@ -210,7 +211,7 @@ int User::GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffe
                     }
                     else {
                         currentDirFile.Close(false);
-                        if (-1 == OpenFile::OpenFileFactory(currentDirFile, currentDiskInodeIndex, this->uid, this->gid, FileFlags::FREAD)) {
+                        if (-1 == OpenFile::OpenFileFactory(currentDirFile, currentDiskInodeIndex, this->uid, this->gid, FileFlags::MOFS_READ)) {
                             return -1;
                         }
 
@@ -313,12 +314,12 @@ int User::Create(const char *path, int mode) {
     }
 
     // 此时currentDirFile是以read权限打开的，需要检查write权限
-    if (!currentDirFile.CheckFlags(FileFlags::FWRITE, this->uid, this->gid)) {
+    if (!currentDirFile.CheckFlags(FileFlags::MOFS_WRITE, this->uid, this->gid)) {
         MoFSErrno = 1;
         Diagnose::PrintError("Don't have permission to write.");
         return -1;
     }
-    currentDirFile.f_flag |= FileFlags::FWRITE;
+    currentDirFile.f_flag |= FileFlags::MOFS_WRITE;
 
     // 检查currentDirFile中是否已经存在同名文件
     int checkExist = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
@@ -351,7 +352,7 @@ int User::Create(const char *path, int mode) {
     }
 
     this->userOpenFileTable[emptyIndex].f_inode = memInodePtr;
-    this->userOpenFileTable[emptyIndex].f_flag = FileFlags::FWRITE;
+    this->userOpenFileTable[emptyIndex].f_flag = FileFlags::MOFS_WRITE;
     this->userOpenFileTable[emptyIndex].f_offset = 0;
 
     // MemInode初始化
@@ -480,12 +481,12 @@ int User::Link(const char *srcPath, const char *dstPath) {
     }
 
     // 此时currentDirFile是以read权限打开的，需要检查write权限
-    if (!currentDirFile.CheckFlags(FileFlags::FWRITE, this->uid, this->gid)) {
+    if (!currentDirFile.CheckFlags(FileFlags::MOFS_WRITE, this->uid, this->gid)) {
         // errno 在 CheckFlags中设置
         Diagnose::PrintError("Don't have permission to write.");
         return -1;
     }
-    currentDirFile.f_flag |= FileFlags::FWRITE;
+    currentDirFile.f_flag |= FileFlags::MOFS_WRITE;
 
     // 检查currentDirFile中是否已经存在同名文件
     int checkExist = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
@@ -531,12 +532,12 @@ int User::Unlink(const char *path) {
     }
 
     // 此时currentDirFile是以read权限打开的，需要检查write权限
-    if (!currentDirFile.CheckFlags(FileFlags::FWRITE, this->uid, this->gid)) {
+    if (!currentDirFile.CheckFlags(FileFlags::MOFS_WRITE, this->uid, this->gid)) {
         // errno 已在 CheckFlags 设置
         Diagnose::PrintError("Don't have permission to write.");
         return -1;
     }
-    currentDirFile.f_flag |= FileFlags::FWRITE;
+    currentDirFile.f_flag |= FileFlags::MOFS_WRITE;
 
     int diskInode = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
     if (diskInode == -1) {
@@ -547,7 +548,7 @@ int User::Unlink(const char *path) {
 
     // 处理对应的DiskInode，应该操作OpenFile而非直接操作DiskInode
     OpenFile unlinkedOpenFile;
-    if (-1 == OpenFile::OpenFileFactory(unlinkedOpenFile, diskInode, this->uid, this->gid, FileFlags::FREAD | FileFlags::FWRITE)) {
+    if (-1 == OpenFile::OpenFileFactory(unlinkedOpenFile, diskInode, this->uid, this->gid, FileFlags::MOFS_READ | FileFlags::MOFS_WRITE)) {
         return -1;
     }
 
@@ -597,7 +598,7 @@ User::User(int uid, int gid) {
     this->gid = gid;
     memset(this->userOpenFileTable, 0, USER_OPEN_FILE_TABLE_SIZE * sizeof(OpenFile));
 
-    this->currentWorkDir = this->Open("/", FileFlags::FREAD | FileFlags::FWRITE);
+    this->currentWorkDir = this->Open("/", FileFlags::MOFS_READ | FileFlags::MOFS_WRITE);
     strcpy(this->currentWorkPath, "/");
 }
 
@@ -649,7 +650,7 @@ int User::GetInodeStat(int inodeIdx, struct FileStat *stat_buf) {
 }
 
 int User::ChangeDir(const char *new_dir) {
-    int workDirFD = this->Open(new_dir, FileFlags::FWRITE | FileFlags::FREAD);
+    int workDirFD = this->Open(new_dir, FileFlags::MOFS_WRITE | FileFlags::MOFS_READ);
     if (-1 == workDirFD) {
         return -1;
     }

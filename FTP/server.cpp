@@ -7,10 +7,24 @@
  * @note 有所改动以修正bug，调整排版和适配MoFS
 */
 
-#include <string.h>
-#include <stdio.h>
-#include <ctype.h>
+#include <cstring>
+#include <cstdio>
+#include <cctype>
 #include "common.h"
+
+#include "../utils/Diagnose.h"
+
+int shutdown();
+
+void sigterm_handler(int sig) {
+    Diagnose::PrintLog("Receive SIGTERM, shutting down...");
+
+    if (-1 == shutdown()) {
+        Diagnose::PrintError("Shutdown error.");
+        exit(-1);
+    }
+    exit(0);
+}
 
 /**
  * Sets up server and handles incoming connections
@@ -22,62 +36,53 @@ void server(int port) {
     unsigned int len = sizeof(client_address);
     int connection, pid, bytes_read;
 
+    signal(SIGCHLD, SIG_IGN);
+    signal(SIGTERM, sigterm_handler);
+
     while (true) {
         connection = accept(sock, (struct sockaddr *) &client_address, &len);
         char buffer[BSIZE];
-        Command *cmd = (Command *)malloc(sizeof(Command));
-        State *state = (State *)malloc(sizeof(State));
-        pid = fork();
+        Command *cmd = (Command *) malloc(sizeof(Command));
+        State *state = (State *) malloc(sizeof(State));
 
         memset(buffer, 0, BSIZE);
 
-        if (pid < 0) {
-            fprintf(stderr, "Cannot create child process.");
-            exit(EXIT_FAILURE);
-        }
-
-        if (pid == 0) {
-            close(sock);
-            char welcome[BSIZE] = "220 ";
-            if (strlen(welcome_message) < BSIZE - 4) {
-                strcat(welcome, welcome_message);
-            } else {
-                strcat(welcome, "Welcome to nice FTP service.");
-            }
-
-            /* Write welcome message */
-            strcat(welcome, "\n");
-            write(connection, welcome, strlen(welcome));
-
-            /* Read commands from client */
-            while (bytes_read = read(connection, buffer, BSIZE)) {
-
-                signal(SIGCHLD, my_wait);
-
-                if (bytes_read <= BSIZE) {
-                    /* TODO: output this to log */
-                    buffer[BSIZE - 1] = '\0';
-                    printf("User %s sent command: %s\n", (state->username == 0) ? "unknown" : state->username, buffer);
-                    parse_command(buffer, cmd);
-                    state->connection = connection;
-
-                    /* Ignore non-ascii char. Ignores telnet command */
-                    if (buffer[0] <= 127 || buffer[0] >= 0) {
-                        response(cmd, state);
-                    }
-                    memset(buffer, 0, BSIZE);
-                    memset(cmd, 0, sizeof(cmd));
-                } else {
-                    /* Read error */
-                    perror("server:read");
-                }
-            }
-            printf("Client disconnected.\n");
-            exit(0);
+        char welcome[BSIZE] = "220 ";
+        if (strlen(welcome_message) < BSIZE - 4) {
+            strcat(welcome, welcome_message);
         } else {
-            printf("closing... :(\n");
-            close(connection);
+            strcat(welcome, "Welcome to nice FTP service.");
         }
+
+        /* Write welcome message */
+        strcat(welcome, "\n");
+        write(connection, welcome, strlen(welcome));
+
+        /* Read commands from client */
+        while (bytes_read = read(connection, buffer, BSIZE)) {
+
+            signal(SIGCHLD, my_wait);
+
+            if (bytes_read <= BSIZE) {
+                /* TODO: output this to log */
+                buffer[BSIZE - 1] = '\0';
+                printf("User %s sent command: %s\n", (state->username == 0) ? "unknown" : state->username, buffer);
+                parse_command(buffer, cmd);
+                state->connection = connection;
+
+                /* Ignore non-ascii char. Ignores telnet command */
+                if (buffer[0] <= 127 || buffer[0] >= 0) {
+                    response(cmd, state);
+                }
+                memset(buffer, 0, BSIZE);
+                memset(cmd, 0, sizeof(cmd));
+            } else {
+                /* Read error */
+                perror("server:read");
+            }
+        }
+        close(connection);
+        printf("Client disconnected.\n");
     }
 }
 
@@ -124,7 +129,7 @@ int accept_connection(int socket) {
     int addrlen = 0;
     struct sockaddr_in client_address;
     addrlen = sizeof(client_address);
-    return accept(socket, (struct sockaddr *) &client_address, (socklen_t *)(&addrlen));
+    return accept(socket, (struct sockaddr *) &client_address, (socklen_t *) (&addrlen));
 }
 
 /**

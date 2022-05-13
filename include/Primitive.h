@@ -106,25 +106,25 @@ int mofs_inode_stat(int inodeIndex, struct FileStat *statbuf);
 
 // 以下为mofs_open函数中oflags可使用的选项
 // 以下三项必须三选一
-const int O_RDONLY = FileFlags::FREAD;  ///< 0001 只读
-const int O_WRONLY = FileFlags::FWRITE; ///< 0010 只写
-const int O_RDWR = O_RDONLY | O_WRONLY; ///< 0011 读写
+const int MOFS_RDONLY = FileFlags::MOFS_READ;  ///< 0001 只读
+const int MOFS_WRONLY = FileFlags::MOFS_WRITE; ///< 0010 只写
+const int MOFS_RDWR = MOFS_RDONLY | MOFS_WRONLY; ///< 0011 读写
 
 // 以下各项可选
-const int O_CREAT = 0x4;                ///< 0100, 如果待打开的文件不存在，则创建
-const int O_APPEND = 0x8;               ///< 1000, 将读写指针设置在结尾
-const int O_DIRECTORY = 0x10;           ///< 0001 0000, 如果打开的文件不是目录文件，则返回-1
+const int MOFS_CREAT = 0x4;                ///< 0100, 如果待打开的文件不存在，则创建
+const int MOFS_APPEND = 0x8;               ///< 1000, 将读写指针设置在结尾
+const int MOFS_DIRECTORY = 0x10;           ///< 0001 0000, 如果打开的文件不是目录文件，则返回-1
 
 // 以下为mofs_open函数中mode可使用的选项，仅在oflags有O_CREAT时有效
-const int S_IRUSR = 0400;           ///< 100 000 000 本用户可读
-const int S_IWUSR = 0200;           ///< 010 000 000 本用户可写
-const int S_IXUSR = 0100;           ///< 001 000 000 本用户可执行
+const int MOFS_IRUSR = 0400;           ///< 100 000 000 本用户可读
+const int MOFS_IWUSR = 0200;           ///< 010 000 000 本用户可写
+const int MOFS_IXUSR = 0100;           ///< 001 000 000 本用户可执行
 
-const int S_IRGRP = S_IRUSR >> 3;   ///< 000 100 000 同组用户可读
-const int S_IWGRP = S_IWUSR >> 3;   ///< 000 010 000 同组用户可写
-const int S_IXGRP = S_IXUSR >> 3;   ///< 000 001 000 同组用户可执行
+const int MOFS_IRGRP = MOFS_IRUSR >> 3;   ///< 000 100 000 同组用户可读
+const int MOFS_IWGRP = MOFS_IWUSR >> 3;   ///< 000 010 000 同组用户可写
+const int MOFS_IXGRP = MOFS_IXUSR >> 3;   ///< 000 001 000 同组用户可执行
 
-const int S_IROTH = S_IRGRP >> 3;   ///< 其他用户可读
-const int S_IWOTH = S_IWGRP >> 3;   ///< 其他用户可写
-const int S_IXOTH = S_IXGRP >> 3;   ///< 其他用户可执行
+const int MOFS_IROTH = MOFS_IRGRP >> 3;   ///< 其他用户可读
+const int MOFS_IWOTH = MOFS_IWGRP >> 3;   ///< 其他用户可写
+const int MOFS_IXOTH = MOFS_IXGRP >> 3;   ///< 其他用户可执行
 #endif //MOFS_PRIMITIVE_H

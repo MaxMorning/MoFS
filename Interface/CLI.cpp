@@ -196,30 +196,30 @@ int process_command(const string &command, stringstream &input_stream,
 
             int fd = -1;
             if (flags == "r") {
-                fd = mofs_open(pathname.c_str(), O_RDONLY, 0);
+                fd = mofs_open(pathname.c_str(), MOFS_RDONLY, 0);
             }
             else if (flags == "w") {
                 input_stream >> oct >> mode >> dec;
 
-                fd = mofs_open(pathname.c_str(), O_WRONLY | O_CREAT, mode);
+                fd = mofs_open(pathname.c_str(), MOFS_WRONLY | MOFS_CREAT, mode);
             }
             else if (flags == "a") {
                 input_stream >> oct >> mode >> dec;
 
-                fd = mofs_open(pathname.c_str(), O_WRONLY | O_APPEND | O_CREAT, mode);
+                fd = mofs_open(pathname.c_str(), MOFS_WRONLY | MOFS_APPEND | MOFS_CREAT, mode);
             }
             else if (flags == "r+") {
-                fd = mofs_open(pathname.c_str(), O_RDWR, 0);
+                fd = mofs_open(pathname.c_str(), MOFS_RDWR, 0);
             }
             else if (flags == "w+") {
                 input_stream >> oct >> mode >> dec;
 
-                fd = mofs_open(pathname.c_str(), O_RDWR | O_CREAT, mode);
+                fd = mofs_open(pathname.c_str(), MOFS_RDWR | MOFS_CREAT, mode);
             }
             else if (flags == "a+") {
                 input_stream >> oct >> mode >> dec;
 
-                fd = mofs_open(pathname.c_str(), O_RDWR | O_APPEND | O_CREAT, mode);
+                fd = mofs_open(pathname.c_str(), MOFS_RDWR | MOFS_APPEND | MOFS_CREAT, mode);
             }
             else {
                 Diagnose::PrintErrno("Cannot recognize flags : " + flags);
@@ -356,7 +356,7 @@ int process_command(const string &command, stringstream &input_stream,
             }
 
             // 从外部文件读，写入内部文件
-            int fd = mofs_open(in_path.c_str(), O_WRONLY | O_CREAT, 0777);
+            int fd = mofs_open(in_path.c_str(), MOFS_WRONLY | MOFS_CREAT, 0777);
             if (fd < 0) {
                 Diagnose::PrintErrno("Cannot open / create in file " + in_path);
                 return 0;
@@ -396,7 +396,7 @@ int process_command(const string &command, stringstream &input_stream,
             }
 
 
-            int fd = mofs_open(in_path.c_str(), O_RDONLY, 0);
+            int fd = mofs_open(in_path.c_str(), MOFS_RDONLY, 0);
             if (fd < 0) {
                 Diagnose::PrintErrno("Cannot open in file " + in_path);
                 return 0;
@@ -554,7 +554,7 @@ void print_list(const char* pathname) {
     FileStat fileStat;
     DirEntry entryBuffer;
 
-    int dir_fd = mofs_open(pathname, O_RDONLY | O_DIRECTORY, 0);
+    int dir_fd = mofs_open(pathname, MOFS_RDONLY | MOFS_DIRECTORY, 0);
 
     if (dir_fd < 0) {
         Diagnose::PrintErrno("Dir not find");
