@@ -14,7 +14,6 @@
 #include <csignal>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <fcntl.h>
 #include <pwd.h>
 #include <netinet/in.h>
 #include <ctime>

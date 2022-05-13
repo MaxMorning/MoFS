@@ -5,6 +5,8 @@
  * @date 2022/5/4
  * @license GPL v3
  */
+#include <cstring>
+
 #include "../../utils/Diagnose.h"
 #include "../../include/device/DeviceManager.h"
 #include "../../include/SuperBlock.h"

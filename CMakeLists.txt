@@ -3,11 +3,12 @@ project(MoFS)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(CMAKE_CXX_FLAGS "-DPRINT_ERROR_IN_LOW_LAYERS -Wno-writable-strings")
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+    set(CMAKE_CXX_FLAGS "-DPRINT_ERROR_IN_LOW_LAYERS")
     set(FTP_FILES )
 else()
+    set(CMAKE_CXX_FLAGS "-DPRINT_ERROR_IN_LOW_LAYERS -Wno-write-strings")
     set(FTP_FILES FTP/common.h FTP/handles.cpp FTP/server.cpp)
 endif ()
 

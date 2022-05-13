@@ -200,7 +200,7 @@ void ftp_list(Command *cmd, State *state) {
         } else {
             if (state->mode == SERVER) {
                 connection = accept_connection(state->sock_pasv);
-                state->message = "150 Here comes the directory listing.\n";
+                state->message = "125 Here comes the directory listing.\n";
                 puts(state->message);
                 write_state(state);
 

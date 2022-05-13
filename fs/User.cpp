@@ -7,6 +7,7 @@
  */
 #include <cassert>
 #include <ctime>
+#include <cstring>
 
 #include "../include/User.h"
 #include "../include/DirEntry.h"

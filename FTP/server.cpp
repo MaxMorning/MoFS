@@ -60,9 +60,6 @@ void server(int port) {
 
         /* Read commands from client */
         while (bytes_read = read(connection, buffer, BSIZE)) {
-
-            signal(SIGCHLD, my_wait);
-
             if (bytes_read <= BSIZE) {
                 /* TODO: output this to log */
                 buffer[BSIZE - 1] = '\0';
@@ -220,13 +217,4 @@ void parse_command(char *cmdstring, Command *cmd) {
             cmd->command[i] -= 'a' - 'A';
         }
     }
-}
-
-/**
- * Handles zombies
- * @param signum Signal number
- */
-void my_wait(int signum) {
-    int status;
-    wait(&status);
 }

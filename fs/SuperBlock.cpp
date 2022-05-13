@@ -7,6 +7,7 @@
  */
 
 #include <ctime>
+#include <cstring>
 
 #include "../include/MoFSErrno.h"
 #include "../include/device/DeviceManager.h"
