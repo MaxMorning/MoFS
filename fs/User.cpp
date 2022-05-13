@@ -164,7 +164,6 @@ int InsertEntryInDirFile(char* nameBuffer, int bufferSize, int inodeIdx, OpenFil
         return -1;
     }
 
-    printf("HHit %d %d\n\n", dirFile.f_inode->i_size, dirFile.f_inode->i_number);
     return 0;
 }
 
@@ -190,10 +189,21 @@ int User::GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffe
         return -1;
     }
 
+    // 移除最后的"/"
+    int max_length = strlen(path);
+    for (int i = strlen(path) - 1; i >= 0; --i) {
+        if (path[i] != '/') {
+            break;
+        }
+        else {
+            max_length = i;
+        }
+    }
+
 
     memset(nameBuffer, 0, NAME_MAX_LENGTH);
     nameBufferIdx = 0;
-    for (; path[pathStrIdx] != '\0'; ++pathStrIdx) {
+    for (; pathStrIdx <= max_length; ++pathStrIdx) {
         if (path[pathStrIdx] == '/') {
             assert(pathStrIdx > 0);
 
@@ -342,6 +352,8 @@ int User::Create(const char *path, int mode) {
     if (-1 == InsertEntryInDirFile(nameBuffer, nameBufferIdx, newDiskInode, currentDirFile)) {
         return -1;
     }
+
+    currentDirFile.Close(false);
 
     // 创建完成后打开
     // 不能从OpenFileFactory构造，因为此时newDiskInode尚未写入磁盘，而OpenFileFactory会从磁盘中加载DiskInode
@@ -503,6 +515,8 @@ int User::Link(const char *srcPath, const char *dstPath) {
         Diagnose::PrintError("Cannot insert entry into dir");
         return -1;
     }
+    currentDirFile.Close(false);
+
 
     // 更新inode
     OpenFile linkOpenFile;
@@ -590,6 +604,7 @@ int User::Unlink(const char *path) {
         Diagnose::PrintError("Cannot delete entry from parent dir.");
         return -1;
     }
+    currentDirFile.Close(true);
 
     return unlinkedOpenFile.Close(true);
 }

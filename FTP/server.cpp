@@ -39,6 +39,8 @@ void server(int port) {
     signal(SIGCHLD, SIG_IGN);
     signal(SIGTERM, sigterm_handler);
 
+    Diagnose::PrintLog("Server established.");
+
     while (true) {
         connection = accept(sock, (struct sockaddr *) &client_address, &len);
         char buffer[BSIZE];
@@ -59,11 +61,18 @@ void server(int port) {
         write(connection, welcome, strlen(welcome));
 
         /* Read commands from client */
-        while (bytes_read = read(connection, buffer, BSIZE)) {
+        while (true) {
+            printf("Pre Read\n");
+            bytes_read = read(connection, buffer, BSIZE);
+            printf("Read return,");
+            if (bytes_read <= 0) {
+                break;
+            }
+
             if (bytes_read <= BSIZE) {
                 /* TODO: output this to log */
                 buffer[BSIZE - 1] = '\0';
-                printf("User %s sent command: %s\n", (state->username == 0) ? "unknown" : state->username, buffer);
+                printf("User %s sent command: %s\n", (state->username == nullptr) ? "unknown" : state->username, buffer);
                 parse_command(buffer, cmd);
                 state->connection = connection;
 
@@ -72,12 +81,17 @@ void server(int port) {
                     response(cmd, state);
                 }
                 memset(buffer, 0, BSIZE);
-                memset(cmd, 0, sizeof(cmd));
-            } else {
+                memset(cmd, 0, sizeof(Command));
+            }
+            else {
                 /* Read error */
                 perror("server:read");
             }
         }
+
+        free(state);
+        free(cmd);
+
         close(connection);
         printf("Client disconnected.\n");
     }
@@ -113,7 +127,7 @@ int create_socket(int port) {
         exit(EXIT_FAILURE);
     }
 
-    listen(sock, 5);
+    listen(sock, 32);
     return sock;
 }
 
@@ -199,7 +213,7 @@ void write_state(State *state) {
  * @param state Client state
  */
 void gen_port(Port *port) {
-    srand(time(NULL));
+    srand(time(nullptr));
     port->p1 = 128 + (rand() % 64);
     port->p2 = rand() % 0xff;
 

@@ -147,6 +147,6 @@ void ftp_type(Command *, State *);
 
 void ftp_abor(State *);
 
-void str_perm(int, char *);
+void ftp_rnfr(Command *, State *);
 
-void my_wait(int);
+void ftp_rnto(Command *, State *);
