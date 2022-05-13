@@ -598,6 +598,7 @@ User::User(int uid, int gid) {
     memset(this->userOpenFileTable, 0, USER_OPEN_FILE_TABLE_SIZE * sizeof(OpenFile));
 
     this->currentWorkDir = this->Open("/", FileFlags::FREAD | FileFlags::FWRITE);
+    strcpy(this->currentWorkPath, "/");
 }
 
 int User::GetStat(const char *path, struct FileStat *stat_buf) {
@@ -660,6 +661,17 @@ int User::ChangeDir(const char *new_dir) {
     this->userOpenFileTable[this->currentWorkDir].f_inode = nullptr; // 释放fd
 
     this->currentWorkDir = workDirFD;
+    // 同步currentWorkPath
+    if (new_dir[0] == '/') {
+        strcpy(this->currentWorkPath, new_dir);
+    }
+    else if (new_dir[0] == '.' && new_dir[1] == '/') {
+        strcat(this->currentWorkPath, &(new_dir[1]));
+    }
+    else {
+        strcat(this->currentWorkPath, "/");
+        strcat(this->currentWorkPath, new_dir);
+    }
     return 0;
 }
 

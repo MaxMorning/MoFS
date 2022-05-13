@@ -18,7 +18,7 @@ ssize_t send_file(int out_fd, int in_fd, off_t *offset, size_t count) {
     char buf[BUF_SIZE];
     size_t toRead, numRead, numSent, totSent;
 
-    if (offset != NULL) {
+    if (offset != nullptr) {
         /* Save current file offset and set offset to value in '*offset' */
         orig = lseek(in_fd, 0, SEEK_CUR);
         if (orig == -1)
@@ -49,7 +49,7 @@ ssize_t send_file(int out_fd, int in_fd, off_t *offset, size_t count) {
         totSent += numSent;
     }
 
-    if (offset != NULL) {
+    if (offset != nullptr) {
         /* Return updated file offset in '*offset', and reset the file offset
            to the value it had when we were called. */
         *offset = lseek(in_fd, 0, SEEK_CUR);

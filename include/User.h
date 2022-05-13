@@ -18,6 +18,7 @@
 
 #define USER_OPEN_FILE_TABLE_SIZE 256
 #define MAX_USER_NUM 64
+#define MAX_WORKING_DIR_PATH_SIZE 128
 
 using namespace std;
 
@@ -126,6 +127,8 @@ public:
     static int GetInodeStat(int inodeIdx, struct FileStat* stat_buf);
 
     int currentWorkDir; ///< 当前的工作目录的fd，通常为 0
+    char currentWorkPath[MAX_WORKING_DIR_PATH_SIZE]; ///< 当前工作目录的绝对路径
+
     int uid;
     int gid;
     OpenFile userOpenFileTable[USER_OPEN_FILE_TABLE_SIZE]; ///< 用户打开的文件列表，如果表项的f_inode == nullptr表示未被占用

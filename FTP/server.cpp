@@ -215,7 +215,6 @@ void parse_command(char *cmdstring, Command *cmd) {
             cmd->command[i] -= 'a' - 'A';
         }
     }
-    printf("%s\n", cmd->command);
 }
 
 /**
