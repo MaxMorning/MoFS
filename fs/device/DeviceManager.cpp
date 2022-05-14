@@ -56,6 +56,14 @@ DeviceManager::~DeviceManager() {
         currentPtr = blockBufferManager.nextLinkList[currentPtr];
     }
 
+    currentPtr = inodeBufferManager.headPtr;
+    while (currentPtr >= 0) {
+        if (this->inodeDirty[currentPtr]) {
+            this->WriteInodeToFile(currentPtr, this->inodeBufferManager.numberLinkList[currentPtr]);
+        }
+
+        currentPtr = inodeBufferManager.nextLinkList[currentPtr];
+    }
 
     if (this->imgFilePtr != nullptr) {
         fclose(this->imgFilePtr);
@@ -67,7 +75,7 @@ void DeviceManager::SetOffset(int offset) {
 }
 
 unsigned int DeviceManager::ReadBlock(int blockNo, void *buffer) {
-// 检查缓存
+    // 检查缓存
     int bufferIdx = blockBufferManager.GetBufferedIndex(blockNo);
     if (bufferIdx != -1) {
         // 有缓存
@@ -123,6 +131,15 @@ unsigned int DeviceManager::WriteBlock(int blockNo, void *buffer) {
 }
 
 int DeviceManager::ReadInode(int inodeNo, DiskInode *inodePtr) {
+    // 检查缓存
+    int bufferIdx = inodeBufferManager.GetBufferedIndex(inodeNo);
+    if (bufferIdx != -1) {
+        // 有缓存
+        memcpy(inodePtr, &(inodeBuffer[bufferIdx]), sizeof(DiskInode));
+        return 0;
+    }
+
+    // 没缓存
     unsigned int dstOffset = 64 + inodeNo * sizeof(DiskInode) + HEADER_SIG_SIZE;
     fseek(this->imgFilePtr, dstOffset, SEEK_SET);
 
@@ -132,20 +149,39 @@ int DeviceManager::ReadInode(int inodeNo, DiskInode *inodePtr) {
         return -1;
     }
 
+    // 缓存
+    int swapInodeIdx = -1;
+    int newBufferIdx = inodeBufferManager.AllocNewBuffer(inodeNo, swapInodeIdx);
+    if (swapInodeIdx != -1 && inodeDirty[newBufferIdx]) {
+        // newBufferIdx指向的块的内容需要被写回磁盘中
+        this->WriteInodeToFile(newBufferIdx, swapInodeIdx);
+    }
+    memcpy(&(inodeBuffer[newBufferIdx]), inodePtr, sizeof(DiskInode));
+    this->inodeDirty[newBufferIdx] = false;
+
     return 0;
 }
 
 int DeviceManager::WriteInode(int inodeNo, DiskInode *inodePtr) {
-    unsigned int dstOffset = 64 + inodeNo * sizeof(DiskInode) + HEADER_SIG_SIZE;
-    fseek(this->imgFilePtr, dstOffset, SEEK_SET);
-
-    unsigned int writeByte = fwrite(inodePtr, 1, sizeof(DiskInode), this->imgFilePtr);
-
-    if (writeByte != sizeof(DiskInode)) {
-        MoFSErrno = 16;
-        return -1;
+    // 检查缓存
+    int bufferIdx = inodeBufferManager.GetBufferedIndex(inodeNo);
+    if (bufferIdx != -1) {
+        // 有缓存
+        memcpy(&(inodeBuffer[bufferIdx]), inodePtr, sizeof(DiskInode));
+        inodeDirty[bufferIdx] = true;
+        return 0;
     }
 
+    // 没缓存
+    int swapInodeIdx = -1;
+    int newBufferIdx = inodeBufferManager.AllocNewBuffer(inodeNo, swapInodeIdx);
+    if (swapInodeIdx != -1 && inodeDirty[newBufferIdx]) {
+        // 有块因为新的缓存块需求而被释放，且该块脏
+        // 需要写回磁盘
+        this->WriteInodeToFile(newBufferIdx, swapInodeIdx);
+    }
+    memcpy(&(inodeBuffer[newBufferIdx]), inodePtr, sizeof(DiskInode));
+    inodeDirty[newBufferIdx] = true;
     return 0;
 }
 
@@ -187,12 +223,11 @@ unsigned int DeviceManager::WriteBlockToFile(int bufferIdx, int blockIdx) {
     return fwrite(this->blockBuffer[bufferIdx], BLOCK_SIZE, 1, this->imgFilePtr);
 }
 
-int DeviceManager::WriteInodeToFile(int bufferIdx) {
-    int inodeNo = this->inodeBufferManager.numberLinkList[bufferIdx];
-    unsigned int dstOffset = 64 + inodeNo * sizeof(DiskInode) + HEADER_SIG_SIZE;
+int DeviceManager::WriteInodeToFile(int bufferIdx, int inodeIdx) {
+    unsigned int dstOffset = 64 + inodeIdx * sizeof(DiskInode) + HEADER_SIG_SIZE;
     fseek(this->imgFilePtr, dstOffset, SEEK_SET);
 
-    unsigned int writeByte = fwrite(&(this->inodeBuffer[bufferIdx]), 1, sizeof(DiskInode), this->imgFilePtr);
+    unsigned int writeByte = fwrite(&(inodeBuffer[bufferIdx]), 1, sizeof(DiskInode), this->imgFilePtr);
 
     if (writeByte != sizeof(DiskInode)) {
         MoFSErrno = 16;

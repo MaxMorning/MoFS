@@ -29,7 +29,6 @@ DiskInode::DiskInode() {
 }
 
 int DiskInode::DiskInodeFactory(int diskInodeIdx, DiskInode &diskInode) {
-    /// @todo 使用缓存加速访问
     if (DeviceManager::deviceManager.ReadInode(diskInodeIdx, &diskInode) == -1) {
         return -1;
     }

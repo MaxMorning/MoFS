@@ -93,9 +93,10 @@ public:
     /**
      * @brief 根据提供的bufferIdx，向磁盘中写入DiskInode
      * @param bufferIdx 待写入的缓存inode号
+     * @param inodeIdx 待写入的inode号
      * @return 0表示成功，-1表示出错
      */
-    int WriteInodeToFile(int bufferIdx);
+    int WriteInodeToFile(int bufferIdx, int inodeIdx);
 
     /**
      * @brief 读取指定编号的diskInode
