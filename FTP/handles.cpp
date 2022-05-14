@@ -354,6 +354,7 @@ void ftp_cwd(Command *cmd, State *state) {
             state->message = "250 Directory successfully changed.\r\n";
         } else {
             state->message = "550 Failed to change directory.\r\n";
+            Diagnose::PrintErrno("Change dir");
         }
     } else {
         state->message = "500 Login with USER and PASS.\r\n";
@@ -640,6 +641,7 @@ void ftp_rnto(Command * cmd, State * state) {
                 if (copy_byte >= 27) {
                     copy_byte = 27;
                 }
+                memset(dirEntry.m_name, 0, 28);
                 memcpy(dirEntry.m_name, cmd->arg, copy_byte + 1);
 
                 // 写回
@@ -654,8 +656,8 @@ void ftp_rnto(Command * cmd, State * state) {
             }
         }
 
-        mofs_close(fd);
     }
+    mofs_close(fd);
 
     delete[] rename_from_buffer;
 
