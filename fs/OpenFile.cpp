@@ -18,7 +18,7 @@ int OpenFile::Read(char *buffer, int size) {
     // 权限检查
     if ((this->f_flag & FileFlags::MOFS_READ) != FileFlags::MOFS_READ) {
         MoFSErrno = 1;
-        Diagnose::PrintError("Read operation denied because of permission.");
+//        Diagnose::PrintError("Read operation denied because of permission.");
         return 0;
     }
 
@@ -35,7 +35,7 @@ int OpenFile::Write(char *buffer, int size) {
     // 权限检查
     if ((this->f_flag & FileFlags::MOFS_WRITE) != FileFlags::MOFS_WRITE) {
         MoFSErrno = 1;
-        Diagnose::PrintError("Write operation denied because of permission.");
+//        Diagnose::PrintError("Write operation denied because of permission.");
         return 0;
     }
 
@@ -63,7 +63,7 @@ int OpenFile::Open(int flag, MemInode *inode, int uid, int gid) {
     this->f_inode = inode;
     if (!this->CheckFlags(flag, uid, gid)) {
         MoFSErrno = 1;
-        Diagnose::PrintError("File permission not granted.");
+//        Diagnose::PrintError("File permission not granted.");
         inode->Close(false);
         return -1;
     }

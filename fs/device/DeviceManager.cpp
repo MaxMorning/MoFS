@@ -38,7 +38,7 @@ void DeviceManager::OpenImage(const char *imagePath) {
         if (this->imgFilePtr == nullptr) {
             // 如果还是打不开，那肯定有问题
             MoFSErrno = 19;
-            Diagnose::PrintError("Cannot open image : " + std::string(imagePath));
+//            Diagnose::PrintError("Cannot open image : " + std::string(imagePath));
             return;
         }
     }

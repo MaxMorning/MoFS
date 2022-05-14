@@ -45,7 +45,7 @@ int MemInode::MemInodeFactory(int diskInodeIdx, MemInode*& memInodePtr) {
 
     if (searchResult == -1) {
         MoFSErrno = 8;
-        Diagnose::PrintError("No more MemInode entry available.");
+//        Diagnose::PrintError("No more MemInode entry available.");
         return -1;
     }
 
@@ -92,7 +92,7 @@ int MemInode::MemInodeNotInit(MemInode*& memInodePtr) {
 
     if (searchResult == -1) {
         MoFSErrno = 8;
-        Diagnose::PrintError("No more MemInode entry available.");
+//        Diagnose::PrintError("No more MemInode entry available.");
         return -1;
     }
 

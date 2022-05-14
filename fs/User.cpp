@@ -217,7 +217,7 @@ int User::GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffe
                     currentDiskInodeIndex = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
                     if (currentDiskInodeIndex == -1) {
                         MoFSErrno = 2;
-                        Diagnose::PrintError("Dir not found.");
+//                        Diagnose::PrintError("Dir not found.");
                         return -1;
                     }
                     else {
@@ -232,7 +232,7 @@ int User::GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffe
                 }
                 else {
                     MoFSErrno = 6;
-                    Diagnose::PrintError("this is not a dir file.");
+//                    Diagnose::PrintError("this is not a dir file.");
                     currentDirFile.Close(false);
                     return -1;
                 }
@@ -243,7 +243,7 @@ int User::GetDirFile(const char *path, OpenFile& currentDirFile, char* nameBuffe
             if (nameBufferIdx >= NAME_MAX_LENGTH) {
                 // 超出名字最大长度
                 MoFSErrno = 13;
-                Diagnose::PrintError("Path invalid.");
+//                Diagnose::PrintError("Path invalid.");
                 return -1;
             }
 
@@ -259,7 +259,7 @@ int User::Open(const char *path, int flags) {
     int emptyIndex = this->GetEmptyEntry();
     if (emptyIndex == -1) {
         MoFSErrno = 9;
-        Diagnose::PrintError("No more empty file descriptor left.");
+//        Diagnose::PrintError("No more empty file descriptor left.");
         return -1;
     }
 
@@ -277,7 +277,7 @@ int User::Open(const char *path, int flags) {
         int currentDiskInodeIndex = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
         if (currentDiskInodeIndex == -1) {
             MoFSErrno = 2;
-            Diagnose::PrintError("No such file.");
+//            Diagnose::PrintError("No such file.");
             currentDirFile.Close(false);
             return -1;
         }
@@ -290,7 +290,7 @@ int User::Open(const char *path, int flags) {
     }
     else {
         MoFSErrno = 6;
-        Diagnose::PrintError("Parent of opening file is not a dir file.");
+//        Diagnose::PrintError("Parent of opening file is not a dir file.");
         currentDirFile.Close(false);
         return -1;
     }
@@ -304,7 +304,7 @@ int User::Create(const char *path, int mode) {
     int emptyIndex = this->GetEmptyEntry();
     if (emptyIndex == -1) {
         MoFSErrno = 9;
-        Diagnose::PrintError("No more empty file descriptor left.");
+//        Diagnose::PrintError("No more empty file descriptor left.");
         return -1;
     }
 
@@ -319,7 +319,7 @@ int User::Create(const char *path, int mode) {
     // 函数正常结束后，nameBuffer中保存有最后一个文件的名称
     if (!currentDirFile.IsDirFile()) {
         MoFSErrno = 6;
-        Diagnose::PrintError("Parent of creating file is not a dir file.");
+//        Diagnose::PrintError("Parent of creating file is not a dir file.");
         currentDirFile.Close(false);
         return -1;
     }
@@ -327,7 +327,7 @@ int User::Create(const char *path, int mode) {
     // 此时currentDirFile是以read权限打开的，需要检查write权限
     if (!currentDirFile.CheckFlags(FileFlags::MOFS_WRITE, this->uid, this->gid)) {
         MoFSErrno = 1;
-        Diagnose::PrintError("Don't have permission to write.");
+//        Diagnose::PrintError("Don't have permission to write.");
         return -1;
     }
     currentDirFile.f_flag |= FileFlags::MOFS_WRITE;
@@ -337,7 +337,7 @@ int User::Create(const char *path, int mode) {
     if (checkExist != -1) {
         // 当前Dir已经存在，创建失败
         MoFSErrno = 5;
-        Diagnose::PrintError("File already exist");
+//        Diagnose::PrintError("File already exist");
         currentDirFile.Close(false);
         return -1;
     }
@@ -345,7 +345,7 @@ int User::Create(const char *path, int mode) {
     int newDiskInode = SuperBlock::superBlock.AllocDiskInode();
     if (newDiskInode == -1) {
         // errno 已经在AllocDiskInode设置
-        Diagnose::PrintError("No more inode available");
+//        Diagnose::PrintError("No more inode available");
         return -1;
     }
 
@@ -401,7 +401,7 @@ int User::GetEmptyEntry() {
 
 int User::Close(int fd) {
     if (fd < 0 || fd >= USER_OPEN_FILE_TABLE_SIZE || this->userOpenFileTable[fd].f_inode == nullptr) {
-        Diagnose::PrintError("Bad file descriptor.");
+//        Diagnose::PrintError("Bad file descriptor.");
         MoFSErrno = 3;
         return -1;
     }
@@ -423,7 +423,7 @@ int User::Close(int fd) {
 int User::Read(int fd, char *buffer, int size) {
     if (fd < 0 || fd >= USER_OPEN_FILE_TABLE_SIZE || this->userOpenFileTable[fd].f_inode == nullptr) {
         MoFSErrno = 3;
-        Diagnose::PrintError("Bad file descriptor.");
+//        Diagnose::PrintError("Bad file descriptor.");
         return -1;
     }
 
@@ -433,7 +433,7 @@ int User::Read(int fd, char *buffer, int size) {
 int User::Write(int fd, char *buffer, int size) {
     if (fd < 0 || fd >= USER_OPEN_FILE_TABLE_SIZE || this->userOpenFileTable[fd].f_inode == nullptr) {
         MoFSErrno = 3;
-        Diagnose::PrintError("Bad file descriptor.");
+//        Diagnose::PrintError("Bad file descriptor.");
         return -1;
     }
 
@@ -445,7 +445,7 @@ int User::Write(int fd, char *buffer, int size) {
 int User::Seek(int fd, int offset, int fromWhere) {
     if (fd < 0 || fd >= USER_OPEN_FILE_TABLE_SIZE || this->userOpenFileTable[fd].f_inode == nullptr) {
         MoFSErrno = 3;
-        Diagnose::PrintError("Bad file descriptor.");
+//        Diagnose::PrintError("Bad file descriptor.");
         return -1;
     }
 
@@ -466,7 +466,7 @@ int User::Link(const char *srcPath, const char *dstPath) {
     // 函数正常结束后，nameBuffer中保存有最后一个文件的名称
     if (!currentDirFile.IsDirFile()) {
         MoFSErrno = 6;
-        Diagnose::PrintError("This is not a dir file.");
+//        Diagnose::PrintError("This is not a dir file.");
         currentDirFile.Close(false);
         return -1;
     }
@@ -474,7 +474,7 @@ int User::Link(const char *srcPath, const char *dstPath) {
     int srcDiskInode = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
     if (srcDiskInode == -1) {
         MoFSErrno = 2;
-        Diagnose::PrintError("File not exist.");
+//        Diagnose::PrintError("File not exist.");
         return -1;
     }
 
@@ -488,7 +488,7 @@ int User::Link(const char *srcPath, const char *dstPath) {
     // 函数正常结束后，nameBuffer中保存有最后一个文件的名称
     if (!currentDirFile.IsDirFile()) {
         MoFSErrno = 6;
-        Diagnose::PrintError("Parent of linking file is not a dir file.");
+//        Diagnose::PrintError("Parent of linking file is not a dir file.");
         currentDirFile.Close(false);
         return -1;
     }
@@ -496,7 +496,7 @@ int User::Link(const char *srcPath, const char *dstPath) {
     // 此时currentDirFile是以read权限打开的，需要检查write权限
     if (!currentDirFile.CheckFlags(FileFlags::MOFS_WRITE, this->uid, this->gid)) {
         // errno 在 CheckFlags中设置
-        Diagnose::PrintError("Don't have permission to write.");
+//        Diagnose::PrintError("Don't have permission to write.");
         return -1;
     }
     currentDirFile.f_flag |= FileFlags::MOFS_WRITE;
@@ -506,13 +506,13 @@ int User::Link(const char *srcPath, const char *dstPath) {
     if (checkExist != -1) {
         // 当前Dir已经存在，创建失败
         MoFSErrno = 5;
-        Diagnose::PrintError("File already exist");
+//        Diagnose::PrintError("File already exist");
         return -1;
     }
 
     if (-1 == InsertEntryInDirFile(nameBuffer, nameBufferIdx, srcDiskInode, currentDirFile)) {
         // 出错了，但不应该。更低层次的API应当已经设置好了。
-        Diagnose::PrintError("Cannot insert entry into dir");
+//        Diagnose::PrintError("Cannot insert entry into dir");
         return -1;
     }
     currentDirFile.Close(false);
@@ -541,7 +541,7 @@ int User::Unlink(const char *path) {
     // 函数正常结束后，nameBuffer中保存有最后一个文件的名称
     if (!currentDirFile.IsDirFile()) {
         MoFSErrno = 6;
-        Diagnose::PrintError("Parent of unlinking file is not a dir file.");
+//        Diagnose::PrintError("Parent of unlinking file is not a dir file.");
         currentDirFile.Close(false);
         return -1;
     }
@@ -549,7 +549,7 @@ int User::Unlink(const char *path) {
     // 此时currentDirFile是以read权限打开的，需要检查write权限
     if (!currentDirFile.CheckFlags(FileFlags::MOFS_WRITE, this->uid, this->gid)) {
         // errno 已在 CheckFlags 设置
-        Diagnose::PrintError("Don't have permission to write.");
+//        Diagnose::PrintError("Don't have permission to write.");
         return -1;
     }
     currentDirFile.f_flag |= FileFlags::MOFS_WRITE;
@@ -557,7 +557,7 @@ int User::Unlink(const char *path) {
     int diskInode = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
     if (diskInode == -1) {
         MoFSErrno = 2;
-        Diagnose::PrintError("File not exist.");
+//        Diagnose::PrintError("File not exist.");
         return -1;
     }
 
@@ -580,7 +580,7 @@ int User::Unlink(const char *path) {
         // 检查该DiskInode是否是目录，如果是，检查是否为空。不允许删除有内容的目录
         if (unlinkedOpenFile.HaveFilesInDir()) {
             MoFSErrno = 14;
-            Diagnose::PrintError("Cannot delete a dir with files.");
+//            Diagnose::PrintError("Cannot delete a dir with files.");
             return -1;
         }
 
@@ -601,7 +601,7 @@ int User::Unlink(const char *path) {
     // 在父目录处删除这一条记录
     if (-1 == RemoveEntryInDirFile(nameBuffer, nameBufferIdx, currentDirFile)) {
         // errno 在 RemoveEntryInDirFile 已设置
-        Diagnose::PrintError("Cannot delete entry from parent dir.");
+//        Diagnose::PrintError("Cannot delete entry from parent dir.");
         return -1;
     }
     currentDirFile.Close(true);
@@ -631,7 +631,7 @@ int User::GetStat(const char *path, struct FileStat *stat_buf) {
     // 函数正常结束后，nameBuffer中保存有最后一个文件的名称
     if (!currentDirFile.IsDirFile()) {
         MoFSErrno = 6;
-        Diagnose::PrintError("This is not a dir file.");
+//        Diagnose::PrintError("This is not a dir file.");
         currentDirFile.Close(false);
         return -1;
     }
@@ -639,7 +639,7 @@ int User::GetStat(const char *path, struct FileStat *stat_buf) {
     int targetInode = SearchFileInodeByName(nameBuffer, nameBufferIdx, currentDirFile);
     if (targetInode == -1) {
         MoFSErrno = 2;
-        Diagnose::PrintError("File not exist.");
+//        Diagnose::PrintError("File not exist.");
         return -1;
     }
 

@@ -89,7 +89,7 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
 
         int freeBlock = SuperBlock::superBlock.AllocBlock();
         if (freeBlock == -1) {
-            Diagnose::PrintError("Cannot alloc free block.");
+//            Diagnose::PrintError("Cannot alloc free block.");
             return -1;
         }
         DeviceManager::deviceManager.WriteBlock(freeBlock, freeBlocks);
@@ -103,7 +103,7 @@ int SuperBlock::MakeFS(int totalDiskByte, int inodeNum) {
     // 创建根目录文件
     SuperBlock::superBlock.s_rootInode = SuperBlock::superBlock.AllocDiskInode();
     if (SuperBlock::superBlock.s_rootInode == -1) {
-        Diagnose::PrintError("Cannot alloc free disk inode.");
+//        Diagnose::PrintError("Cannot alloc free disk inode.");
 
         return -1;
     }
@@ -215,7 +215,7 @@ int SuperBlock::ReleaseInode(int inodeIdx) {
         // 当前直接管辖的inode已达上限，找一个block写入
         int blockIdx = this->AllocBlock();
         if (blockIdx == -1) {
-            Diagnose::PrintError("Cannot alloc free block.");
+//            Diagnose::PrintError("Cannot alloc free block.");
             return -1;
         }
 
