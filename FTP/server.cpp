@@ -13,6 +13,7 @@
 #include "common.h"
 
 #include "../utils/Diagnose.h"
+#include "../include/User.h"
 
 int shutdown();
 
@@ -100,6 +101,7 @@ void server(int port) {
 
         close(connection);
         Diagnose::PrintLog("Client disconnected.");
+        delete User::userPtr;
     }
 }
 

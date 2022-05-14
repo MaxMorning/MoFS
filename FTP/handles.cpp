@@ -148,6 +148,8 @@ void ftp_pass(Command *cmd, State *state) {
     if (state->username_ok == 1) {
         state->logged_in = 1;
         state->message = "230 Login successful\r\n";
+
+        User::userPtr = new User{0, 0};
     } else {
         state->message = "500 Invalid username or password\r\n";
     }
