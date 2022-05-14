@@ -38,7 +38,8 @@ void server(int port) {
     int connection, pid, bytes_read;
 
     signal(SIGCHLD, SIG_IGN);
-    signal(SIGINT, sigint_handler);
+    signal(SIGINT, sigint_handler); // Ctrl C 退出程序
+    signal(SIGTERM, sigint_handler); // kill 杀进程
 
     Diagnose::PrintLog("Server established.");
 
@@ -130,7 +131,7 @@ int create_socket(int port) {
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof reuse);
 
     /* Bind socket to server address */
-    if (bind(sock, (struct sockaddr *) &server_address, sizeof(server_address)) < 0) {
+    if (::bind(sock, (struct sockaddr *) &server_address, sizeof(server_address)) < 0) {
         fprintf(stderr, "Cannot bind socket to address");
         exit(EXIT_FAILURE);
     }
