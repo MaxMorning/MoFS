@@ -1,7 +1,7 @@
 /**
  * @file server.c
  * @brief FTP服务器实现
- * @author Siim
+ * @author Siim, 韩孟霖
  * @license BSD-3-Clause License
  * @mainpage https://github.com/Siim/ftp
  * @note 有大量改动以修正bug，调整排版和适配MoFS
@@ -52,8 +52,9 @@ void server(int port) {
         char welcome[BSIZE] = "220 ";
         if (strlen(welcome_message) < BSIZE - 4) {
             strcat(welcome, welcome_message);
-        } else {
-            strcat(welcome, "Welcome to nice FTP service.");
+        }
+        else {
+            strcat(welcome, "Greetings.");
         }
 
         /* Write welcome message */
@@ -62,9 +63,9 @@ void server(int port) {
 
         /* Read commands from client */
         while (true) {
-            printf("Pre Read\n");
+//            printf("Pre Read\n");
             bytes_read = read(connection, buffer, BSIZE);
-            printf("Read return,");
+//            printf("Read return,");
             if (bytes_read <= 0) {
                 break;
             }
@@ -72,7 +73,12 @@ void server(int port) {
             if (bytes_read <= BSIZE) {
                 /* TODO: output this to log */
                 buffer[BSIZE - 1] = '\0';
-                printf("User %s sent command: %s\n", (state->username == nullptr) ? "unknown" : state->username, buffer);
+                std::string username = std::string((state->username == nullptr) ? "unknown" : state->username);
+
+                // 默认每条信息的最后两个字节为\r\n
+                int msg_length = strlen(buffer) - 2;
+
+                Diagnose::PrintLog("User " + username + " sent command: " + std::string(buffer, msg_length));
                 parse_command(buffer, cmd);
                 state->connection = connection;
 
@@ -85,7 +91,7 @@ void server(int port) {
             }
             else {
                 /* Read error */
-                perror("server:read");
+                Diagnose::PrintError("Server read message error.");
             }
         }
 
@@ -93,7 +99,7 @@ void server(int port) {
         free(cmd);
 
         close(connection);
-        printf("Client disconnected.\n");
+        Diagnose::PrintLog("Client disconnected.");
     }
 }
 
@@ -205,7 +211,8 @@ int lookup(char *needle, const char **haystack, int count) {
 void write_state(State *state) {
     write(state->connection, state->message, strlen(state->message));
 
-    printf("Server : %s\n", state->message);
+    // 默认每条信息的最后两个字节为\r\n，但不去除，正好作为不同响应之间的分隔符
+    Diagnose::PrintLog("Server send : " + std::string(state->message));
 }
 
 /**

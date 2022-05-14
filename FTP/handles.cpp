@@ -1,7 +1,7 @@
 /**
  * @file handles.c
  * @brief FTP处理函数实现
- * @author Siim
+ * @author Siim, 韩孟霖
  * @license BSD-3-Clause License
  * @mainpage https://github.com/Siim/ftp
  * @note 有大量改动以修正bug，调整排版和适配macOS 和 MoFS
@@ -99,7 +99,7 @@ void response(Command *cmd, State *state) {
             if (state->logged_in) {
                 state->message = "200 Nice to NOOP you!\r\n";
             } else {
-                state->message = "530 NOOB hehe.\r\n";
+                state->message = "530 NOOB :(\r\n";
             }
             write_state(state);
             break;
@@ -175,18 +175,14 @@ void ftp_pasv(Command *cmd, State *state) {
             }
         }
 
-        printf("port: %d\r\n", 256 * port->p1 + port->p2);
+        Diagnose::PrintLog("New PASV Port: " + to_string(256 * port->p1 + port->p2));
         sprintf(buff, response, ip[0], ip[1], ip[2], ip[3], port->p1, port->p2);
         state->message = buff;
         state->mode = SERVER;
-        puts(state->message);
-
     }
     else {
         state->message = "530 Please login with USER and PASS.\r\n";
-        printf("%s", state->message);
     }
-    printf("Data to be send : %s\r\n", state->message);
     write_state(state);
 }
 
@@ -199,19 +195,20 @@ void ftp_list(Command *cmd, State *state) {
 
         if (cmd->arg[0] == '-' || cmd->arg[0] == '\0') {
             dir_fd = mofs_open(User::userPtr->currentWorkPath, MOFS_RDONLY | MOFS_DIRECTORY, 0);
-            Diagnose::PrintLog("Current work dir " + string(User::userPtr->currentWorkPath) + ", " +
-                               to_string(User::userPtr->userOpenFileTable[dir_fd].f_inode->i_number));
+//            Diagnose::PrintLog("Current work dir " + string(User::userPtr->currentWorkPath) + ", " +
+//                               to_string(User::userPtr->userOpenFileTable[dir_fd].f_inode->i_number));
         } else {
             dir_fd = mofs_open(cmd->arg, MOFS_RDONLY | MOFS_DIRECTORY, 0);
         }
         if (dir_fd == -1) {
             state->message = "550 Failed to open directory.\r\n";
+            Diagnose::PrintErrno("Open directory failed");
         }
         else {
             if (state->mode == SERVER) {
                 connection = accept_connection(state->sock_pasv);
                 state->message = "125 Here comes the directory listing.\r\n";
-                puts(state->message);
+
                 write_state(state);
 
                 FileStat fileStat;
@@ -365,14 +362,11 @@ void ftp_cwd(Command *cmd, State *state) {
 
 /** 
  * MKD command 
- * TODO: full path directory creation
  */
 void ftp_mkd(Command *cmd, State *state) {
     if (state->logged_in) {
         char res[2 * BSIZE + 32];
         memset(res, 0, 2 * BSIZE + 32);
-
-        /* TODO: check if directory already exists with chdir? */
 
         /* Absolute path */
         if (cmd->arg[0] == '/') {
@@ -382,6 +376,7 @@ void ftp_mkd(Command *cmd, State *state) {
                 strcat(res, "\" new directory created.\r\n");
                 state->message = res;
             } else {
+                Diagnose::PrintErrno("Cannot create directory.");
                 state->message = "550 Failed to create directory. Check path or permissions.\r\n";
             }
         }
@@ -391,6 +386,7 @@ void ftp_mkd(Command *cmd, State *state) {
                 sprintf(res, "257 \"%s\" new directory created.\r\n", cmd->arg); //32 additional characters
                 state->message = res;
             } else {
+                Diagnose::PrintErrno("Cannot create directory.");
                 state->message = "550 Failed to create directory.\r\n";
             }
         }
@@ -426,7 +422,7 @@ void ftp_retr(Command *cmd, State *state) {
                 if (sent_total) {
 
                     if (sent_total != file_size) {
-                        perror("ftp_retr:send_file");
+                        Diagnose::PrintErrno("RETR error");
                         state->message = "500 Fatal error.\r\n";
                     }
                     else {
@@ -441,6 +437,7 @@ void ftp_retr(Command *cmd, State *state) {
                 close(connection);
             }
             else {
+                Diagnose::PrintErrno("Cannot open file " + string(cmd->arg));
                 state->message = "550 Failed to get file\r\n";
             }
         }
@@ -462,10 +459,9 @@ void ftp_stor(Command *cmd, State *state) {
     const int buff_size = 8192;
 
     fd = mofs_open(cmd->arg, MOFS_WRONLY | MOFS_CREAT, 0777);
-    printf("File %s created.", cmd->arg);
+    Diagnose::PrintLog("File " + string(cmd->arg) + " created.");
     if (fd == -1) {
-        /* TODO: write status message here! */
-        perror("ftp_stor:fopen");
+        Diagnose::PrintErrno("Cannot open or create file " + string(cmd->arg));
         state->message = "550 No such file or directory.\r\n";
     }
     else if (state->logged_in) {
@@ -494,7 +490,7 @@ void ftp_stor(Command *cmd, State *state) {
             errno = 0;
             while (true) {
                 long recv_byte_cnt = recv(connection, transfer_buffer, buff_size, 0);
-                printf("Recv %ld byte(s)\r\n", recv_byte_cnt);
+                Diagnose::PrintLog("Receive " + to_string(recv_byte_cnt) + " byte(s).");
                 if (recv_byte_cnt <= 0) {
                     // 读取完成
                     break;
@@ -511,11 +507,11 @@ void ftp_stor(Command *cmd, State *state) {
 
             /* Internal error */
             if (write_byte_cnt <= -1) {
-                perror("ftp_stor: transfer");
+                perror("STOR transfer failed");
                 state->message = "500 Fatal error.\r\n";
             }
             else {
-                printf("Transfer %d byte(s).\r\n", total_trans_byte);
+                Diagnose::PrintLog("Total Transfer " + to_string(total_trans_byte) + " byte(s).");
                 state->message = "226 File send OK.\r\n";
             }
             close(connection);
@@ -603,6 +599,7 @@ void ftp_size(Command *cmd, State *state) {
             sprintf(filesize, "213 %d\r\n", fileStat.st_size);
             state->message = filesize;
         } else {
+            Diagnose::PrintErrno("Cannot get file stat of " + string(cmd->arg));
             state->message = "550 Could not get file size.\r\n";
         }
     } else {
@@ -628,6 +625,7 @@ void ftp_rnto(Command * cmd, State * state) {
     int fd = mofs_open(User::userPtr->currentWorkPath, MOFS_RDWR, 0);
 
     if (fd < 0 || rename_from_buffer == nullptr) {
+        Diagnose::PrintErrno("Cannot open file " + string(User::userPtr->currentWorkPath));
         state->message = "553 Requested action not taken.\r\n";
     }
     else {
@@ -655,6 +653,7 @@ void ftp_rnto(Command * cmd, State * state) {
                 mofs_lseek(fd, -1 * int(sizeof(DirEntry)), SEEK_CUR);
                 int write_byte_cnt = mofs_write(fd, &dirEntry, sizeof(DirEntry));
                 if (write_byte_cnt != sizeof(DirEntry)) {
+                    Diagnose::PrintErrno("Write dir file failed.");
                     state->message = "553 Requested action not taken.\r\n";
                 }
 

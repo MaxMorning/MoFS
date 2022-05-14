@@ -1,7 +1,7 @@
 /**
  * @file common.h
  * @brief FTP通用头文件
- * @author Siim
+ * @author Siim, 韩孟霖
  * @license BSD-3-Clause License
  * @mainpage https://github.com/Siim/ftp
  * @note 有大量改动以修正bug，调整排版和适配MoFS
