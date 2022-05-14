@@ -4,7 +4,7 @@
  * @author Siim
  * @license BSD-3-Clause License
  * @mainpage https://github.com/Siim/ftp
- * @note 有所改动以修正bug，调整排版和适配MoFS
+ * @note 有大量改动以修正bug，调整排版和适配MoFS
 */
 
 #include <cstring>
@@ -16,8 +16,8 @@
 
 int shutdown();
 
-void sigterm_handler(int sig) {
-    Diagnose::PrintLog("Receive SIGTERM, shutting down...");
+void sigint_handler(int sig) {
+    Diagnose::PrintLog("Receive SIGINT, shutting down...");
 
     if (-1 == shutdown()) {
         Diagnose::PrintError("Shutdown error.");
@@ -37,7 +37,7 @@ void server(int port) {
     int connection, pid, bytes_read;
 
     signal(SIGCHLD, SIG_IGN);
-    signal(SIGTERM, sigterm_handler);
+    signal(SIGINT, sigint_handler);
 
     Diagnose::PrintLog("Server established.");
 

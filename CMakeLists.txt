@@ -26,4 +26,5 @@ add_executable(MoFS
         include/MoFSErrno.h fs/MoFSErrno.cpp
         include/CLI.h Interface/CLI.cpp
         include/device/Buffer.h fs/device/Buffer.cpp
-        ${FTP_FILES})
+        ${FTP_FILES}
+        utils/CmdTools.h utils/CmdTools.cpp)

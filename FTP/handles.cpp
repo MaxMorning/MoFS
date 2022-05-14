@@ -4,7 +4,7 @@
  * @author Siim
  * @license BSD-3-Clause License
  * @mainpage https://github.com/Siim/ftp
- * @note 有所改动以修正bug，调整排版和适配macOS 和 MoFS
+ * @note 有大量改动以修正bug，调整排版和适配macOS 和 MoFS
 */
 #include <cerrno>
 #include <string>
@@ -325,7 +325,7 @@ void ftp_quit(State *state) {
     state->message = "221 Goodbye, friend. I never thought I'd die like this.\r\n";
     write_state(state);
     close(state->connection);
-    exit(0);
+    kill(getpid(), SIGTERM);
 }
 
 /** PWD command */
@@ -427,23 +427,28 @@ void ftp_retr(Command *cmd, State *state) {
 
                     if (sent_total != file_size) {
                         perror("ftp_retr:send_file");
-                        exit(EXIT_SUCCESS);
+                        state->message = "500 Fatal error.\r\n";
                     }
-
-                    state->message = "226 File send OK.\r\n";
-                } else {
+                    else {
+                        state->message = "226 File send OK.\r\n";
+                    }
+                }
+                else {
                     state->message = "550 Failed to read file.\r\n";
                 }
 
                 mofs_close(fd);
                 close(connection);
-            } else {
+            }
+            else {
                 state->message = "550 Failed to get file\r\n";
             }
-        } else {
+        }
+        else {
             state->message = "550 Please use PASV instead of PORT.\r\n";
         }
-    } else {
+    }
+    else {
         state->message = "530 Please login with USER and PASS.\r\n";
     }
 
@@ -507,14 +512,16 @@ void ftp_stor(Command *cmd, State *state) {
             /* Internal error */
             if (write_byte_cnt <= -1) {
                 perror("ftp_stor: transfer");
-                exit(EXIT_SUCCESS);
-            } else {
+                state->message = "500 Fatal error.\r\n";
+            }
+            else {
                 printf("Transfer %d byte(s).\r\n", total_trans_byte);
                 state->message = "226 File send OK.\r\n";
             }
             close(connection);
         }
-    } else {
+    }
+    else {
         state->message = "530 Please login with USER and PASS.\r\n";
     }
     mofs_close(fd);
