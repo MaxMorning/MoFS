@@ -86,6 +86,9 @@ void infinite_loop(istream &input_stream, int loop_time) {
             cout << cli_header << currentWorkDir << "]$ ";
             string line;
             getline(cin, line);
+            if (line.length() == 0) {
+                continue;
+            }
             stringstream string_stream{line};
             string_stream >> command;
             if (-1 == process_command(command, string_stream, command_enum_mapping)) {
@@ -98,6 +101,9 @@ void infinite_loop(istream &input_stream, int loop_time) {
             cout << cli_header;
             string line;
             getline(cin, line);
+            if (line.length() == 0) {
+                continue;
+            }
             stringstream string_stream{line};
             string_stream >> command;
             if (-1 == process_command(command, string_stream, command_enum_mapping)) {
