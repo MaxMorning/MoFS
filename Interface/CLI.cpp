@@ -36,7 +36,7 @@ using namespace std;
 #define CHGUSR_MAP_VALUE        12      ///< 切换用户:                                   chgusr [uid: int] [gid: int]
 #define CD_MAP_VALUE            13      ///< 切换工作目录:                                cd [路径名: str]
 #define LINK_MAP_VALUE          14      ///< 创建硬链接:                                 link [源路径名: str] [目标路径名: str]
-#define EXIT_MAP_VALUE          15      ///< 退出循环                                    exit
+#define EXIT_MAP_VALUE          15      ///< 退出程序                                    exit
 #define HELP_MAP_VALUE          16      ///< 帮助与提示:                                 help
 
 /**
@@ -514,7 +514,7 @@ int process_command(const string &command, stringstream &input_stream,
         case HELP_MAP_VALUE: {
             cout << "格式化:                                     mkfs [大小(MB): int] [最大inode数: int]\n"
                     "格式化:                                     fformat [大小(MB): int] [最大inode数: int]\n"
-                    "展示目录下文件:                              ls {路径: str: 当前目录}\n"
+                    "展示目录下文件:                              ls [路径: str: 当前目录]\n"
                     "建立目录:                                   mkdir [路径目录名: str] [权限: oct_int]\n"
                     "创建文件(返回fd: int):                       fcreat [路径名: str] [权限: oct_int]\n"
                     "打开文件(返回fd: int):                       fopen [路径名: str] [要求: str] {权限: oct_int}     (要求：rw, r+, etc.)\n"
@@ -527,7 +527,8 @@ int process_command(const string &command, stringstream &input_stream,
                     "拷贝出(返回拷贝字节数: int):                  mvout [内部路径名: str] [外部路径名: str]\n"
                     "切换用户:                                   chgusr [uid: int] [gid: int]\n"
                     "切换工作目录:                                cd [路径名: str]\n"
-                    "退出循环:                                   exit\n"
+                    "创建硬链接:                                 link [源路径名: str] [目标路径名: str]\n"
+                    "退出程序                                    exit\n"
                     "帮助与提示:                                 help" << endl;
 
             return 0;

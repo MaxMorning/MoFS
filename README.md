@@ -6,13 +6,16 @@ A simple File System implemented by MaxMorning.
 FTP CLI
 
 ### 原语层
-mofs_creat mofs_read mofs_write mofs_lseek等
-
-### 用户层
-User.Open User.Create
+mofs_creat mofs_read mofs_write mofs_lseek等 User.Open 
 
 **涉及到的类**  
-OpenFile User
+User
+
+### 用户层
+User.Create
+
+**涉及到的类**  
+OpenFile
 
 ### 系统层
 MemInode.Close DiskInode::DiskInodeFactory

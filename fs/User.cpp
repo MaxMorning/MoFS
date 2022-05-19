@@ -581,6 +581,8 @@ int User::Unlink(const char *path) {
         if (unlinkedOpenFile.HaveFilesInDir()) {
             MoFSErrno = 14;
 //            Diagnose::PrintError("Cannot delete a dir with files.");
+            unlinkedOpenFile.f_inode->i_nlink++; // 删除失败，还是要加回去
+            unlinkedOpenFile.Close(false);
             return -1;
         }
 
