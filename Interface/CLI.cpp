@@ -288,7 +288,13 @@ int process_command(const string &command, stringstream &input_stream,
             }
 
             string write_data;
+            // 移除剩余的开头空格
+            char space = ' ';
+            while (space == ' ' && !input_stream.eof()) {
+                input_stream >> space;
+            }
             getline(input_stream, write_data);
+            write_data = space + write_data;
 
             int write_byte_cnt = mofs_write(fd, (void *) write_data.c_str(), count);
 
@@ -488,6 +494,10 @@ int process_command(const string &command, stringstream &input_stream,
             }
             else {
                 currentWorkDir = pathname.substr(last_pos + 1, pathname.length() - last_pos);
+            }
+
+            if (currentWorkDir.length() == 0) {
+                currentWorkDir = "/";
             }
         }
         break;
