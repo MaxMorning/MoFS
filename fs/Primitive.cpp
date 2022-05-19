@@ -46,6 +46,15 @@ int mofs_open(const char *pathname, int oflags,int mode) {
                     return -1;
                 }
 
+                // 以要求的权限重新打开
+                User::userPtr->Close(open_fd);
+
+                open_fd = User::userPtr->Open(pathname, oflags & 0x3);
+                if (open_fd < 0) {
+                    // 这时候打开出错，说明有问题
+                    return -1;
+                }
+
                 // 成功创建
                 return open_fd;
             }

@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <iomanip>
 #include <sstream>
+#include <cstring>
 
 #include "../include/CLI.h"
 #include "../include/User.h"
@@ -134,21 +135,27 @@ int process_command(const string &command, stringstream &input_stream,
                 return 0;
             }
 
+            for (User* & userPtr : User::userTable) {
+                if (userPtr != nullptr) {
+                    delete userPtr;
+                }
+            }
+
+            memset(User::userTable, 0, sizeof(int*) * MAX_USER_NUM);
+
             if (-1 == SuperBlock::MakeFS(total_bytes * 1024 * 1024, max_inode_num)) {
                 Diagnose::PrintErrno("Cannot make file system");
                 return -1;
             }
 
-            // 关闭所有打开的文件
-            for (auto & i : MemInode::systemMemInodeTable) {
-                i.i_used = 0;
-            }
-
-            for (auto & i : User::userPtr->userOpenFileTable) {
-                i.f_inode = nullptr;
-            }
-
-            delete User::userPtr;
+//            // 关闭所有打开的文件
+//            for (auto & i : MemInode::systemMemInodeTable) {
+//                i.i_used = 0;
+//            }
+//
+//            for (auto & i : User::userPtr->userOpenFileTable) {
+//                i.f_inode = nullptr;
+//            }
 
             // 默认用户为0, 0
             User::userPtr = new User{0, 0};
