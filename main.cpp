@@ -103,9 +103,9 @@ int main(int argc, char* argv[]) {
 
     InitSystem();
 
-    string mode = "cli";
-    get_str_argument(argc, argv, "--mode", mode);
-    if (mode == "cli") {
+    bool ftp_mode = (PARSE_SUCCESS == get_argument(argc, argv, "--ftp", nullptr, nullptr));
+    bool cli_mode = (PARSE_SUCCESS == get_argument(argc, argv, "--cli", nullptr, nullptr));
+    if (cli_mode) {
         // 控制台模式
         int loop_time = -1;
         if (PARSE_ERR_INVALID_VALUE == get_argument(argc, argv, "--loop", "%d", &loop_time)) {
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
             exit(-1);
         }
     }
-    else if (mode == "ftp") {
+    else if (ftp_mode) {
         // FTP模式
 #ifdef _WIN32
         Diagnose::PrintError("FTP not supported under Windows platform.");
