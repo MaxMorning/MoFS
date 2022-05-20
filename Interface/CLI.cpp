@@ -32,8 +32,8 @@ using namespace std;
 #define FWRITE_MAP_VALUE        7       ///< 写入文件(返回实际读取的字节数: int):            fwrite [fd: int] [写入字节数: int] [写入内容(不允许有空格和换行): str]
 #define FLSEEK_MAP_VALUE        8       ///< 设置读写指针(返回设置的指针位置: int):          flseek [fd: int] [偏移量: int] [起始位置: str]   (起始位置: SET / CUR / END)
 #define FDELETE_MAP_VALUE       9       ///< 删除(取消链接):                              fdelete [路径名: str]
-#define MVIN_MAP_VALUE          10      ///< 拷贝入(返回拷贝字节数: int):                  mvin [外部路径名: str] [内部路径名: str]
-#define MVOUT_MAP_VALUE         11      ///< 拷贝出(返回拷贝字节数: int):                  mvout [内部路径名: str] [外部路径名: str]
+#define MVIN_MAP_VALUE          10      ///< 拷贝入:                                     mvin [外部路径名: str] [内部路径名: str]
+#define MVOUT_MAP_VALUE         11      ///< 拷贝出:                                     mvout [内部路径名: str] [外部路径名: str]
 #define CHGUSR_MAP_VALUE        12      ///< 切换用户:                                   chgusr [uid: int] [gid: int]
 #define CD_MAP_VALUE            13      ///< 切换工作目录:                                cd [路径名: str]
 #define LINK_MAP_VALUE          14      ///< 创建硬链接:                                 link [源路径名: str] [目标路径名: str]
@@ -472,6 +472,7 @@ int process_command(const string &command, stringstream &input_stream,
 
             User::userPtr = newUser;
             cli_header = "[User(" + to_string(User::userPtr->uid) + ", " + to_string(User::userPtr->gid) + ") ";
+            currentWorkDir = "/";
         }
         break;
 
@@ -540,8 +541,8 @@ int process_command(const string &command, stringstream &input_stream,
                     "写入文件(返回实际读取的字节数: int):            fwrite [fd: int] [写入字节数: int] [写入内容(不允许有空格和换行): str]\n"
                     "设置读写指针(返回设置的指针位置: int):          flseek [fd: int] [偏移量: int] [起始位置: str]   (起始位置: SET / CUR / END)\n"
                     "删除(取消链接):                              fdelete [路径名: str]\n"
-                    "拷贝入(返回拷贝字节数: int):                  mvin [外部路径名: str] [内部路径名: str]\n"
-                    "拷贝出(返回拷贝字节数: int):                  mvout [内部路径名: str] [外部路径名: str]\n"
+                    "拷贝入:                                     mvin [外部路径名: str] [内部路径名: str]\n"
+                    "拷贝出:                                     mvout [内部路径名: str] [外部路径名: str]\n"
                     "切换用户:                                   chgusr [uid: int] [gid: int]\n"
                     "切换工作目录:                                cd [路径名: str]\n"
                     "创建硬链接:                                 link [源路径名: str] [目标路径名: str]\n"
